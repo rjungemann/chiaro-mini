@@ -28,13 +28,15 @@ const defaultSynthContextState = {
   setState: () => {}
 }
 
+const basename = import.meta.env.VITE_BASE_ROUTE ?? '/chiaro-mini/'
+
 const fetchPatcher = () => (
-  fetch("/export/patch.export.json")
+  fetch(`${basename}export/patch.export.json`)
   .then((response) => response.json())
 );
 
 const fetchDeps = () => (
-  fetch("export/dependencies.json")
+  fetch(`${basename}export/dependencies.json`)
   .then((response) => response.json())
   .then((deps) => (
     // TODO: Remove any
