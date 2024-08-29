@@ -1,18 +1,11 @@
-import { useRef, MutableRefObject, useEffect, useState, ReactSVGElement } from 'react';
-import { createDevice, Device, MIDIByte, MIDIEvent } from "@rnbo/js";
+import { useRef, MutableRefObject, useEffect, useState, ReactSVGElement, ChangeEvent } from 'react';
+import { createDevice, Device, IPreset, MessagePortType, MIDIByte, MIDIEvent } from "@rnbo/js";
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
-import { ModeToggle } from './components/mode-toggle';
-
-type Preset = {
-  __presetid: "rnbo",
-  __sps: {
-    chorus: Record<string, string>
-    reverb: Record<string, string>
-    synth: Record<string, string>[] // gain-1, harm-1, etc.
-  }
-}
+import { ModeToggle } from '@/components/mode-toggle';
+import { useSynth } from '@/state/useSynth';
+import { Textarea } from './components/ui/textarea';
 
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
@@ -20,6 +13,52 @@ type Preset = {
 // .then((p) => console.log(JSON.stringify(p, null, 2)))
 
 // TODO: MIDI
+
+// TODO: Scales
+
+// TODO: Import patch
+
+// TODO: Copy preset to clipboard
+
+// // TODO: Send events to device
+// // Turn the text into a list of numbers (RNBO messages must be numbers, not text)
+// const values = [1.0, 2.0, 3.0];
+// // Send the message event to the RNBO device
+// let messageEvent = new RNBO.MessageEvent(RNBO.TimeNow, inportTag, values);
+// device.scheduleEvent(messageEvent);
+
+// // Load a preset
+// const preset = patcher.presets[0]
+// // A preset has a preset and an index
+// device.setPreset(preset.preset);
+
+// type Preset = {
+//   __presetid: "rnbo",
+//   __sps: {
+//     chorus: Record<string, string>
+//     reverb: Record<string, string>
+//     synth: Record<string, string>[] // gain-1, harm-1, etc.
+//   }
+// }
+
+type DeviceParam = {
+  id: string
+  name: string
+  min: number
+  max: number
+  steps: number
+  value: number
+  initialValue: number
+  displayName: string
+  unit: string
+  exponent: number
+  index: number
+}
+
+type Point2 = {
+  x: number
+  y: number
+}
 
 const sections = {
   global: 'synth/vel-amt synth/gain-mix synth/slop-amt synth/vibrato-amt synth/vibrato-freq synth/vibrato-ms effect-level'.split(' '),
@@ -82,34 +121,6 @@ const names: Record<string, string> = {
   'reverb/decaydiffusion2': 'Decay Diffusion II',
 }
 
-type DeviceParam = {
-  id: string
-  name: string
-  min: number
-  max: number
-  steps: number
-  value: number
-  initialValue: number
-  displayName: string
-  unit: string
-  exponent: number
-  index: number
-}
-
-const fetchPatcher = () => (
-  fetch("/export/patch.export.json")
-  .then((response) => response.json())
-);
-
-const fetchDeps = () => (
-  fetch("export/dependencies.json")
-  .then((response) => response.json())
-  .then((deps) => (
-    // TODO: Remove any
-    deps.map((dep: any) => ({ ...dep, ...(dep.file ? { file: "export/" + dep.file } : {}) }))
-  ))
-);
-
 const makeNoteOn = (channel: number, note: number, velocity: number): [MIDIByte, MIDIByte, MIDIByte] => ([144 + channel, note, velocity])
 const makeNoteOff = (channel: number, note: number): [MIDIByte, MIDIByte, MIDIByte] => ([128 + channel, note, 0])
 
@@ -169,15 +180,14 @@ const randomizeParams = ({ device }: { device: Device }) => {
 
 const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
   const [value, setValue] = useState<number>(param.initialValue)
-  // TODO: Remove any
   const onSliderChange = ([value]: [number]) => {
     setValue(value)
     param.value = value
   }
-  // TODO: Remove any
-  const onTextChange = (ev: any) => {
-    setValue(ev.target.value)
-    param.value = Number.parseFloat(ev.target.value)
+  const onTextChange = (ev: ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(ev.target.value)
+    setValue(value)
+    param.value = value
   }
   const steps = (
     (param.steps > 1)
@@ -187,8 +197,7 @@ const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
 
   // Listen for updates from device
   useEffect(() => {
-    // TODO: Remove any
-    const callback = (updatedParam: any) => {
+    const callback = (updatedParam: DeviceParam) => {
       if (param.id === updatedParam.id) {
         console.info('Received param update from device', param)
         setValue(updatedParam.value)
@@ -200,12 +209,10 @@ const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
     }
   }, [])
 
-  const id = param.id
-  const name = names[id]
+  const name = names[param.id]
   if (!name) {
-
+    throw new Error(`Could not find a name for param with id ${param.id}`)
   }
-
   return (
     <div className="grid flex-1 items-start gap-2 pt-1 pb-1 grid-cols-3 items-center">
       <label className="param-label" htmlFor={param.name}>{name}</label>
@@ -220,9 +227,13 @@ const Keyboard = ({ device }: { device: Device }) => {
 
   let channel = 0;
   let port = 0;
-  const onMouseDownFn = (index: number, note: number) => () => {
-    let noteOnMessage = makeNoteOn(channel, note, 100);
-    let noteOnEvent = new MIDIEvent(device.context.currentTime * 1000, port, noteOnMessage);
+  const onMouseDownFn = (index: number, note: number) => (ev: React.MouseEvent) => {
+    const el = ev.currentTarget as HTMLElement
+    const ratiox = (ev.pageX - el.offsetLeft) / el.offsetWidth
+    const ratioy = (ev.pageY - el.offsetTop) / el.offsetHeight
+    const velocity = Math.floor((1.0 - ratioy) * 128.0)
+    const noteOnMessage = makeNoteOn(channel, note, velocity);
+    const noteOnEvent = new MIDIEvent(device.context.currentTime * 1000, port, noteOnMessage);
     device.scheduleEvent(noteOnEvent);
     heldNotes.current.push(note);
   }
@@ -243,56 +254,23 @@ const Keyboard = ({ device }: { device: Device }) => {
     }
   }, [])
 
+  const indices = [8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]
+  const notes = [60, 62, 64, 65, 67, 69, 71, 72, 48, 50, 52, 53, 55, 57, 59, 60]
+  const indexNotes = indices.map((n, i) => [n, notes[i]])
+
   return (
     <div className="pt-4 pb-4">
       <div className="grid flex-1 items-start gap-4 grid-cols-8">
-        <Button variant={variant} onMouseDown={onMouseDownFn(8, 60)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(9, 62)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(10, 64)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(11, 65)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(12, 67)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(13, 69)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(14, 71)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(15, 72)}></Button>
-
-        <Button variant={variant} onMouseDown={onMouseDownFn(0, 48)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(1, 50)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(2, 52)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(3, 53)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(4, 55)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(5, 57)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(6, 59)}></Button>
-        <Button variant={variant} onMouseDown={onMouseDownFn(7, 60)}></Button>
+        {indexNotes.map(([index, note]) => (
+          <Button className="h-36" key={index} variant="secondary" onMouseDown={onMouseDownFn(index, note)}></Button>
+        ))}
       </div>
     </div>
   )
 }
 
-const startAudio = async (context: AudioContext) => {
-  // Start audio processing
-  context.resume()
-  // Create gain node and connect it to audio output
-  const outputNode = context.createGain();
-  outputNode.connect(context.destination);
-  // Create the device
-  const patcher = await fetchPatcher()
-  const deps = await fetchDeps()
-  const device: Device = await createDevice({ patcher, context })
-  // Attach samples the device depends on, to the device
-  if (deps.length) {
-    await device.loadDataBufferDependencies(deps);
-  }
-  // Connect the device to the output
-  device.node.connect(outputNode);
-  return device
-}
-
-type Point2 = {
-  x: number
-  y: number
-}
-
-const Slider2 = ({ onChange, value, isChangingRef }: { onChange: (value: Point2) => void, value: Point2, isChangingRef: MutableRefObject<boolean> }) => {
+const Slider2 = ({ onChange, value }: { onChange: (value: Point2) => void, value: Point2 }) => {
+  const { state, state: { isChangingRef }, setState } = useSynth()
   const width = 100
   const height = 100
   const defaultX = 50
@@ -312,11 +290,13 @@ const Slider2 = ({ onChange, value, isChangingRef }: { onChange: (value: Point2)
   }, [value])
 
   const onMouseDown = (ev: React.MouseEvent) => {
+    if (!isChangingRef) return
     isChangingRef.current = true
   }
   const onMouseMove = (ev: React.MouseEvent) => {
     if (!svgRef.current) return;
     if (!ellipseRef.current) return;
+    if (!isChangingRef) return;
     if (!isChangingRef.current) return;
     const pt = svgRef.current.createSVGPoint();
     pt.x = ev.clientX;
@@ -330,7 +310,8 @@ const Slider2 = ({ onChange, value, isChangingRef }: { onChange: (value: Point2)
     onChange(newValue)
   }
   useEffect(() => {
-    const onMouseUp = (ev: MouseEvent) => {
+    const onMouseUp = (ev: MouseEvent): any => {
+      if (!isChangingRef) return
       isChangingRef.current = false
     }
     document.body.addEventListener('mouseup', onMouseUp)
@@ -346,52 +327,20 @@ const Slider2 = ({ onChange, value, isChangingRef }: { onChange: (value: Point2)
   )
 }
 
-function Home() {
-  const isChangingRef = useRef(false)
+const Params = () => {
+  const { state: { device, isChangingRef } } = useSynth()
 
-  const contextRef: MutableRefObject<AudioContext | null> = useRef(null);
-  useEffect(() => {
-    contextRef.current = new AudioContext();
-  }, []);
-
-  const [device, setDevice] = useState<Device | null>(null)
+  // TODO: Lift to synth state
   const [osc1Loc, setOsc1Loc] = useState<Point2>({ x: 0, y: 0 })
   const [osc2Loc, setOsc2Loc] = useState<Point2>({ x: 0, y: 0 })
   const [osc3Loc, setOsc3Loc] = useState<Point2>({ x: 0, y: 0 })
-
-  // Outport events
-  useEffect(() => {
-    if (!device) return
-    // TODO: Remove any
-    const callback = (ev: any) => {
-      // Ignore message events that don't belong to an outport
-      if (device.outports.findIndex(elt => elt.tag === ev.tag) < 0) return
-      console.info('Outport event', ev)
-    }
-    device.messageEvent.subscribe(callback)
-    return () => {
-      device.messageEvent.unsubscribe(callback)
-    }
-  }, [device])
-
-  const startClicked = async () => {
-    if (!contextRef.current) {
-      throw new Error('No audio context exists. Cannot start Chiaro.')
-    }
-    const device = await startAudio(contextRef.current)
-    setDevice(device)
-  }
-
-  const randomizeClicked = () => {
-    if (!device) return
-    randomizeParams({ device })
-  }
 
   // Listen for updates from device
   useEffect(() => {
     if (!device) return
     // TODO: Remove any
     const callback = (updatedParam: any) => {
+      if (!isChangingRef) return
       if (isChangingRef.current) return
       // console.info('Received param update from device', updatedParam)
       if (updatedParam.id === 'synth/shaper-x-1') setOsc1Loc({ ...osc1Loc, x: updatedParam.value })
@@ -416,6 +365,108 @@ function Home() {
   }
 
   if (!device) {
+    return null
+  }
+  
+  return (
+    <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-4">
+      <div className="text-red-500">
+        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 1</h3>
+        <Param device={device} param={device.parameters.find((param) => `synth/harm-1` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-1` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/gain-1` === param.id)} />
+        <Slider2 value={osc1Loc} onChange={onSlider2ChangeFn(1)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/s-1` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/r-1` === param.id)} />
+      </div>
+
+      <div className="text-orange-500">
+        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 2</h3>
+        <Param device={device} param={device.parameters.find((param) => `synth/harm-2` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} />
+        <Slider2 value={osc2Loc} onChange={onSlider2ChangeFn(2)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/r-2` === param.id)} />
+      </div>
+
+      <div className="text-amber-500">
+        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 3</h3>
+        <Param device={device} param={device.parameters.find((param) => `synth/harm-3` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} />
+        <Slider2 value={osc3Loc} onChange={onSlider2ChangeFn(3)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/r-3` === param.id)} />
+      </div>
+
+      <div>
+        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Global</h3>
+        {
+          sections['global']
+          .map((id) => device.parameters.find((param) => id === param.id))
+          .map((param) => {
+            // console.log(param)
+            return (
+              <Param key={param.id} device={device} param={param} />
+            )
+          })
+        }
+      </div>
+
+      <div>
+        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Chorus</h3>
+        {
+          sections['chorus']
+          .map((id) => device.parameters.find((param) => id === param.id))
+          .map((param) => (
+            <Param key={param.id} device={device} param={param} />
+          ))
+        }
+      </div>
+
+      <div>
+        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Reverb</h3>
+        {
+          sections['reverb']
+          .map((id) => device.parameters.find((param) => id === param.id))
+          .map((param) => (
+            <Param key={param.id} device={device} param={param} />
+          ))
+        }
+      </div>
+    </div>
+  )
+}
+
+function Home() {
+  const { state, state: { device, startDevice } } = useSynth()
+  const [patch, setPatch] = useState<IPreset | null>(null);
+
+  const randomizeClicked = () => {
+    if (!device) return
+    randomizeParams({ device })
+  }
+
+  const exportPatchClicked = () => {
+    if (!device) return
+    device.getPreset()
+    .then((preset) => {
+      setPatch(preset)
+    })
+  }
+
+  const clearPatch = () => {
+    setPatch(null)
+  }
+
+  if (!device) {
     return (
       <main className="flex flex-col items-center justify-center w-full h-full bg-secondary">
         <h1 className="text-2xl font-semibold leading-none tracking-tight pb-4">
@@ -427,135 +478,63 @@ function Home() {
           A unique vocal synth, rebuilt
         </p>
         <div>
-          <Button onClick={startClicked}>Start</Button>
+          <Button onClick={startDevice}>Start</Button>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="p-4">
-      <div className="flex justify-between items-baseline">
-        <h1 className="text-2xl font-semibold leading-none tracking-tight pb-4">
-          Chiaro
-          {' '}
-          <span className="font-normal">Mini</span>
-        </h1>
-        <ModeToggle />
+    <div className="relative w-full h-full">
+      <div className="absolute left-2 w-full h-full">
+        <main className="p-4">
+          <div className="flex justify-between items-baseline">
+            <h1 className="text-2xl font-semibold leading-none tracking-tight pb-4">
+              Chiaro
+              {' '}
+              <span className="font-normal">Mini</span>
+            </h1>
+            <ModeToggle />
+          </div>
+          
+          <div className="pb-4">
+            <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
+            <Keyboard device={device} />
+          </div>
+
+          <div className="pb-4">
+            <div className="flex justify-between items-baseline">
+              <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Parameters</h2>
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={randomizeClicked}>Randomize</Button>
+                <Button variant="outline" onClick={exportPatchClicked}>Export Patch</Button>
+              </div>
+            </div>
+
+            <Params />
+          </div>
+        </main>
       </div>
-      
-      <div className="pb-4">
-        <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
-        <Keyboard device={device} />
-      </div>
 
-      <div className="pb-4">
-        <div className="flex justify-between items-baseline">
-          <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Parameters</h2>
-
-          <Button variant="outline" onClick={randomizeClicked}>Randomize</Button>
-        </div>
-
-        <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-4">
-          <div className="text-red-500">
-            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 1</h3>
-            <Param device={device} param={device.parameters.find((param) => `synth/harm-1` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-1` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/gain-1` === param.id)} />
-            <Slider2 value={osc1Loc} onChange={onSlider2ChangeFn(1)} isChangingRef={isChangingRef} />
-            <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/s-1` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/r-1` === param.id)} />
+      {patch && (
+        <>
+          <div className="absolute left-0 w-full h-full bg-secondary opacity-50"></div>
+          <div className="absolute left-0 w-full h-full flex justify-center items-center">
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm lg:max-w-md">
+              <div className="flex flex-col p-6 space-y-0 pb-6 gap-2">
+                <h3 className="font-semibold tracking-tight text-2xl pb-2">Export Patch</h3>
+                <Textarea onClick={(ev) => (ev.currentTarget as unknown as any).select()} className="w-96">
+                  {JSON.stringify(patch)}
+                </Textarea>
+                <Button onClick={clearPatch}>Done</Button>
+              </div>
+            </div>
           </div>
-
-          <div className="text-orange-500">
-            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 2</h3>
-            <Param device={device} param={device.parameters.find((param) => `synth/harm-2` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} />
-            <Slider2 value={osc2Loc} onChange={onSlider2ChangeFn(2)} isChangingRef={isChangingRef} />
-            <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/r-2` === param.id)} />
-          </div>
-
-          <div className="text-amber-500">
-            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 3</h3>
-            <Param device={device} param={device.parameters.find((param) => `synth/harm-3` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} />
-            <Slider2 value={osc3Loc} onChange={onSlider2ChangeFn(3)} isChangingRef={isChangingRef} />
-            <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} />
-            <Param device={device} param={device.parameters.find((param) => `synth/r-3` === param.id)} />
-          </div>
-
-          <div>
-            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Global</h3>
-            {
-              sections['global']
-              .map((id) => device.parameters.find((param) => id === param.id))
-              .map((param) => {
-                console.log(param)
-                return (
-                  <Param key={param.id} device={device} param={param} />
-                )
-              })
-            }
-          </div>
-
-          <div>
-            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Chorus</h3>
-            {
-              sections['chorus']
-              .map((id) => device.parameters.find((param) => id === param.id))
-              .map((param) => (
-                <Param key={param.id} device={device} param={param} />
-              ))
-            }
-          </div>
-
-          <div>
-            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Reverb</h3>
-            {
-              sections['reverb']
-              .map((id) => device.parameters.find((param) => id === param.id))
-              .map((param) => (
-                <Param key={param.id} device={device} param={param} />
-              ))
-            }
-          </div>
-        </div>
-      </div>
-    </main>
+        </>
+      )}
+    </div>
   )
 }
 
 export default Home
-
-// Device messages correspond to inlets/outlets or inports/outports
-// You can filter for one or the other using the "type" of the message
-
-// // Handle inports
-// const inports = device.messages.filter(message => message.type === RNBO.MessagePortType.Inport);
-// // An inport has a tag, value
-
-// // TODO: Send events to device
-// // Turn the text into a list of numbers (RNBO messages must be numbers, not text)
-// const values = [1.0, 2.0, 3.0];
-// // Send the message event to the RNBO device
-// let messageEvent = new RNBO.MessageEvent(RNBO.TimeNow, inportTag, values);
-// device.scheduleEvent(messageEvent);
-
-// // TODO: Render different inports for selection
-// inports.forEach(inport => {
-//     // ...
-// });
-
-// // Load a preset
-// const preset = patcher.presets[0]
-// // A preset has a preset and an index
-// device.setPreset(preset.preset);

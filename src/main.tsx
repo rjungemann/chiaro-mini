@@ -7,6 +7,7 @@ import {
 import { ThemeProvider } from "@/components/theme-provider"
 import Home from './Home'
 import './globals.css'
+import { SynthProvider } from '@/state/useSynth';
 
 const router = createBrowserRouter([
   {
@@ -18,7 +19,9 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <RouterProvider router={router} />
+      <SynthProvider>
+        <RouterProvider router={router} />
+      </SynthProvider>
     </ThemeProvider>
   </StrictMode>
 );
