@@ -1,19 +1,33 @@
-import { useRef, MutableRefObject, useEffect, useState } from 'react';
+import { useRef, MutableRefObject, useEffect, useState, ReactSVGElement } from 'react';
 import { createDevice, Device, MIDIByte, MIDIEvent } from "@rnbo/js";
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
+import { ModeToggle } from './components/mode-toggle';
+
+type Preset = {
+  __presetid: "rnbo",
+  __sps: {
+    chorus: Record<string, string>
+    reverb: Record<string, string>
+    synth: Record<string, string>[] // gain-1, harm-1, etc.
+  }
+}
+
+// // TODO: Presets
+// // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
+// device.getPreset()
+// .then((p) => console.log(JSON.stringify(p, null, 2)))
+
+// TODO: MIDI
 
 const sections = {
-  osc1: 'synth/harm-1 synth/shaper-x-1 synth/shaper-y-1 synth/shaper-gain-1 synth/a-1 synth/d-1 synth/s-1 synth/r-1 synth/gain-1'.split(' '),
-  osc2: 'synth/harm-2 synth/shaper-x-2 synth/shaper-y-2 synth/shaper-gain-2 synth/a-2 synth/d-2 synth/s-2 synth/r-2 synth/gain-2'.split(' '),
-  osc3: 'synth/harm-3 synth/shaper-x-3 synth/shaper-y-3 synth/shaper-gain-3 synth/a-3 synth/d-3 synth/s-3 synth/r-3 synth/gain-3'.split(' '),
-  global: 'synth/vel-amt synth/gain-mix effect-level'.split(' '),
+  global: 'synth/vel-amt synth/gain-mix synth/slop-amt synth/vibrato-amt synth/vibrato-freq synth/vibrato-ms effect-level'.split(' '),
   chorus: 'chorus/center chorus/bw chorus/rate chorus/fb'.split(' '),
   reverb: 'reverb/drywet reverb/decay reverb/damping reverb/predelay reverb/inbandwidth reverb/indiffusion1 reverb/indiffusion2 reverb/decaydiffusion1 reverb/decaydiffusion2'.split(' '),
 }
 
-const names = {
+const names: Record<string, string> = {
   'synth/harm-1': 'Harmonics',
   'synth/shaper-x-1': 'Shaper X',
   'synth/shaper-y-1': 'Shaper Y',
@@ -46,6 +60,10 @@ const names = {
 
   'synth/vel-amt': 'Velocity Amount',
   'synth/gain-mix': 'Gain Mix',
+  'synth/slop-amt': 'Slop Amount',
+  'synth/vibrato-amt': 'Vibrato Amount',
+  'synth/vibrato-freq': 'Vibrato Frequency',
+  'synth/vibrato-ms': 'Vibrato Speed (ms)',
   'effect-level': 'Effect Level',
 
   'chorus/center': 'Center',
@@ -109,6 +127,8 @@ const randomizeParams = ({ device }: { device: Device }) => {
     if (param.id === 'effect-level') return;
     if (param.id === 'synth/vel-amt') return;
     if (param.id.match(/^synth\/gain-/)) return;
+    if (param.id.match(/^synth\/vibrato-/)) return;
+    if (param.id.match(/^synth\/slop-/)) return;
     if (param.id.match(/^chorus\//)) return;
     if (param.id.match(/^reverb\//)) return;
     // Shaper settings
@@ -117,11 +137,7 @@ const randomizeParams = ({ device }: { device: Device }) => {
       return;
     }
     if (param.id.match(/^synth\/shaper-gain-/)) {
-      param.value = Math.random() * 0.25;
-      return;
-    }
-    if (param.id.match(/^synth\/shaper-gain-/)) {
-      param.value = Math.random() * 3.0;
+      param.value = scale(Math.random(), 0.0, 1.0, 1.0, 1.5);
       return;
     }
     // Harmonics
@@ -184,7 +200,11 @@ const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
     }
   }, [])
 
-  const name = names[param.id]
+  const id = param.id
+  const name = names[id]
+  if (!name) {
+
+  }
 
   return (
     <div className="grid flex-1 items-start gap-2 pt-1 pb-1 grid-cols-3 items-center">
@@ -267,13 +287,77 @@ const startAudio = async (context: AudioContext) => {
   return device
 }
 
+type Point2 = {
+  x: number
+  y: number
+}
+
+const Slider2 = ({ onChange, value, isChangingRef }: { onChange: (value: Point2) => void, value: Point2, isChangingRef: MutableRefObject<boolean> }) => {
+  const width = 100
+  const height = 100
+  const defaultX = 50
+  const defaultY = 50
+  // const valRef = useRef<Point2 | null>(null)
+  // const [val, setVal] = useState<{ x: number, y: number }>({ x: defaultX, y: defaultY })
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const ellipseRef = useRef<SVGEllipseElement | null>(null)
+
+  useEffect(() => {
+    if (!ellipseRef.current) return;
+    const loc = { x: value.x * width, y: value.y * height }
+    const elem: SVGElement = ellipseRef.current
+    elem.setAttribute("cx", loc.x.toFixed(1))
+    elem.setAttribute("cy", loc.y.toFixed(1))
+    // setVal(value)
+  }, [value])
+
+  const onMouseDown = (ev: React.MouseEvent) => {
+    isChangingRef.current = true
+  }
+  const onMouseMove = (ev: React.MouseEvent) => {
+    if (!svgRef.current) return;
+    if (!ellipseRef.current) return;
+    if (!isChangingRef.current) return;
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = ev.clientX;
+    pt.y = ev.clientY;
+    const loc = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
+    const elem: SVGElement = ellipseRef.current
+    elem.setAttribute("cx", loc.x.toFixed(1))
+    elem.setAttribute("cy", loc.y.toFixed(1))
+    const newValue = { x: loc.x / width, y: loc.y / height }
+    // valRef.current = newValue
+    onChange(newValue)
+  }
+  useEffect(() => {
+    const onMouseUp = (ev: MouseEvent) => {
+      isChangingRef.current = false
+    }
+    document.body.addEventListener('mouseup', onMouseUp)
+    return () => {
+      document.body.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
+  return (
+    <svg ref={svgRef} onMouseDown={onMouseDown} onMouseMove={onMouseMove} className="w-full aspect-square bg-secondary mt-4 mb-4 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
+      <ellipse ref={ellipseRef} stroke="currentColor" fill="none" strokeWidth="1" cx={defaultX} cy={defaultY} rx="4" ry="4" />
+    </svg>
+  )
+}
+
 function Home() {
+  const isChangingRef = useRef(false)
+
   const contextRef: MutableRefObject<AudioContext | null> = useRef(null);
   useEffect(() => {
     contextRef.current = new AudioContext();
   }, []);
 
   const [device, setDevice] = useState<Device | null>(null)
+  const [osc1Loc, setOsc1Loc] = useState<Point2>({ x: 0, y: 0 })
+  const [osc2Loc, setOsc2Loc] = useState<Point2>({ x: 0, y: 0 })
+  const [osc3Loc, setOsc3Loc] = useState<Point2>({ x: 0, y: 0 })
 
   // Outport events
   useEffect(() => {
@@ -303,96 +387,149 @@ function Home() {
     randomizeParams({ device })
   }
 
+  // Listen for updates from device
+  useEffect(() => {
+    if (!device) return
+    // TODO: Remove any
+    const callback = (updatedParam: any) => {
+      if (isChangingRef.current) return
+      // console.info('Received param update from device', updatedParam)
+      if (updatedParam.id === 'synth/shaper-x-1') setOsc1Loc({ ...osc1Loc, x: updatedParam.value })
+      if (updatedParam.id === 'synth/shaper-y-1') setOsc1Loc({ ...osc1Loc, y: updatedParam.value })
+      if (updatedParam.id === 'synth/shaper-x-2') setOsc2Loc({ ...osc2Loc, x: updatedParam.value })
+      if (updatedParam.id === 'synth/shaper-y-2') setOsc2Loc({ ...osc2Loc, y: updatedParam.value })
+      if (updatedParam.id === 'synth/shaper-x-3') setOsc3Loc({ ...osc3Loc, x: updatedParam.value })
+      if (updatedParam.id === 'synth/shaper-y-3') setOsc3Loc({ ...osc3Loc, y: updatedParam.value })
+    }
+    device.parameterChangeEvent.subscribe(callback)
+    return () => {
+      device.parameterChangeEvent.unsubscribe(callback)
+    }
+  }, [device])
+
+  const onSlider2ChangeFn = (index: number) => (point: Point2) => {
+    if (!device) return
+    const xparam = device.parameters.find((param) => param.id === `synth/shaper-x-${index}`)
+    const yparam = device.parameters.find((param) => param.id === `synth/shaper-y-${index}`)
+    xparam.value = scale(point.x, 0.0, 1.0, xparam.min, xparam.max)
+    yparam.value = scale(point.y, 0.0, 1.0, yparam.min, yparam.max)
+  }
+
+  if (!device) {
+    return (
+      <main className="flex flex-col items-center justify-center w-full h-full bg-secondary">
+        <h1 className="text-2xl font-semibold leading-none tracking-tight pb-4">
+          Chiaro
+          {' '}
+          <span className="font-normal">Mini</span>
+        </h1>
+        <p className="text-sm text-muted-foreground pb-4">
+          A unique vocal synth, rebuilt
+        </p>
+        <div>
+          <Button onClick={startClicked}>Start</Button>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="p-4">
-      <h1 className="text-2xl font-semibold leading-none tracking-tight pb-4">
-        Chiaro
-      </h1>
+      <div className="flex justify-between items-baseline">
+        <h1 className="text-2xl font-semibold leading-none tracking-tight pb-4">
+          Chiaro
+          {' '}
+          <span className="font-normal">Mini</span>
+        </h1>
+        <ModeToggle />
+      </div>
+      
+      <div className="pb-4">
+        <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
+        <Keyboard device={device} />
+      </div>
 
-      {!device && <div>
-        <Button onClick={startClicked}>Start</Button>
-      </div>}
-
-      {device && <>
-        <div className="pb-4">
-          <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
-          <Keyboard device={device} />
-        </div>
-
-        <div className="pb-4">
+      <div className="pb-4">
+        <div className="flex justify-between items-baseline">
           <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Parameters</h2>
 
           <Button variant="outline" onClick={randomizeClicked}>Randomize</Button>
+        </div>
 
-          <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-4">
-            <div>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 1</h3>
-              {
-                sections['osc1']
-                .map((id) => device.parameters.find((param) => id === param.id))
-                .map((param) => (
-                  <Param key={param.id} device={device} param={param} />
-                ))
-              }
-            </div>
+        <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-4">
+          <div className="text-red-500">
+            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 1</h3>
+            <Param device={device} param={device.parameters.find((param) => `synth/harm-1` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-1` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/gain-1` === param.id)} />
+            <Slider2 value={osc1Loc} onChange={onSlider2ChangeFn(1)} isChangingRef={isChangingRef} />
+            <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-1` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-1` === param.id)} />
+          </div>
 
-            <div>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 2</h3>
-              {
-                sections['osc2']
-                .map((id) => device.parameters.find((param) => id === param.id))
-                .map((param) => (
-                  <Param key={param.id} device={device} param={param} />
-                ))
-              }
-            </div>
+          <div className="text-orange-500">
+            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 2</h3>
+            <Param device={device} param={device.parameters.find((param) => `synth/harm-2` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} />
+            <Slider2 value={osc2Loc} onChange={onSlider2ChangeFn(2)} isChangingRef={isChangingRef} />
+            <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-2` === param.id)} />
+          </div>
 
-            <div>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 3</h3>
-              {
-                sections['osc3']
-                .map((id) => device.parameters.find((param) => id === param.id))
-                .map((param) => (
-                  <Param key={param.id} device={device} param={param} />
-                ))
-              }
-            </div>
+          <div className="text-amber-500">
+            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 3</h3>
+            <Param device={device} param={device.parameters.find((param) => `synth/harm-3` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} />
+            <Slider2 value={osc3Loc} onChange={onSlider2ChangeFn(3)} isChangingRef={isChangingRef} />
+            <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-3` === param.id)} />
+          </div>
 
-            <div>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Global</h3>
-              {
-                sections['global']
-                .map((id) => device.parameters.find((param) => id === param.id))
-                .map((param) => (
+          <div>
+            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Global</h3>
+            {
+              sections['global']
+              .map((id) => device.parameters.find((param) => id === param.id))
+              .map((param) => {
+                console.log(param)
+                return (
                   <Param key={param.id} device={device} param={param} />
-                ))
-              }
-            </div>
+                )
+              })
+            }
+          </div>
 
-            <div>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Chorus</h3>
-              {
-                sections['chorus']
-                .map((id) => device.parameters.find((param) => id === param.id))
-                .map((param) => (
-                  <Param key={param.id} device={device} param={param} />
-                ))
-              }
-            </div>
+          <div>
+            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Chorus</h3>
+            {
+              sections['chorus']
+              .map((id) => device.parameters.find((param) => id === param.id))
+              .map((param) => (
+                <Param key={param.id} device={device} param={param} />
+              ))
+            }
+          </div>
 
-            <div>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Reverb</h3>
-              {
-                sections['reverb']
-                .map((id) => device.parameters.find((param) => id === param.id))
-                .map((param) => (
-                  <Param key={param.id} device={device} param={param} />
-                ))
-              }
-            </div>
+          <div>
+            <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Reverb</h3>
+            {
+              sections['reverb']
+              .map((id) => device.parameters.find((param) => id === param.id))
+              .map((param) => (
+                <Param key={param.id} device={device} param={param} />
+              ))
+            }
           </div>
         </div>
-      </>}
+      </div>
     </main>
   )
 }
