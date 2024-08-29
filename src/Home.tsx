@@ -95,6 +95,62 @@ const fetchDeps = () => (
 const makeNoteOn = (channel: number, note: number, velocity: number): [MIDIByte, MIDIByte, MIDIByte] => ([144 + channel, note, velocity])
 const makeNoteOff = (channel: number, note: number): [MIDIByte, MIDIByte, MIDIByte] => ([128 + channel, note, 0])
 
+const scale = (x: number, min: number, max: number, a: number, b: number): number => (
+  (((b - a) * (x - min)) / (max - min)) + a
+)
+
+const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
+
+const envLengths = [5, 20, 200, 2000, 12000]
+
+const randomizeParams = ({ device }: { device: Device }) => {
+  device.parameters.forEach((param) => {
+    // Settings to ignore
+    if (param.id === 'effect-level') return;
+    if (param.id === 'synth/vel-amt') return;
+    if (param.id.match(/^synth\/gain-/)) return;
+    if (param.id.match(/^chorus\//)) return;
+    if (param.id.match(/^reverb\//)) return;
+    // Shaper settings
+    if (param.id.match(/^synth\/shaper-[xy]-/)) {
+      param.value = Math.floor(Math.random() * 2.0);
+      return;
+    }
+    if (param.id.match(/^synth\/shaper-gain-/)) {
+      param.value = Math.random() * 0.25;
+      return;
+    }
+    if (param.id.match(/^synth\/shaper-gain-/)) {
+      param.value = Math.random() * 3.0;
+      return;
+    }
+    // Harmonics
+    if (param.id.match(/^synth\/harm-/)) {
+      param.value = Math.random() * 6.0;
+      return;
+    }
+    // Envelope settings
+    if (param.id.match(/^synth\/a-/)) {
+      param.value = pick(envLengths);
+      return;
+    }
+    if (param.id.match(/^synth\/d-/)) {
+      param.value = pick(envLengths);
+      return;
+    }
+    if (param.id.match(/^synth\/d-/)) {
+      param.value = Math.random();
+      return;
+    }
+    if (param.id.match(/^synth\/r-/)) {
+      param.value = pick(envLengths);
+      return;
+    }
+    // Everything else
+    param.value = scale(Math.random(), 0.0, 1.0, param.min, param.max)
+  })
+}
+
 const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
   const [value, setValue] = useState<number>(param.initialValue)
   // TODO: Remove any
@@ -128,50 +184,65 @@ const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
     }
   }, [])
 
+  const name = names[param.id]
+
   return (
     <div className="grid flex-1 items-start gap-2 pt-1 pb-1 grid-cols-3 items-center">
-      <label className="param-label" htmlFor={param.name}>{names[param.id]}</label>
+      <label className="param-label" htmlFor={param.name}>{name}</label>
       <Slider className="param-slider" id={param.id} value={[value]} onValueChange={onSliderChange} step={steps} min={param.min} max={param.max} />
-      <Input type="text" value={value} onChange={onTextChange}></Input>
+      <Input value={value} onChange={onTextChange}></Input>
     </div>
   )
 }
 
 const Keyboard = ({ device }: { device: Device }) => {
-  const onClickFn = (index: number, note: number) => () => {
-    let channel = 0;
-    let port = 0;
-    let noteDurationMs = 250;
-    // Format a MIDI message paylaod, this constructs a MIDI on event
+  let heldNotes = useRef<number[]>([])
+
+  let channel = 0;
+  let port = 0;
+  const onMouseDownFn = (index: number, note: number) => () => {
     let noteOnMessage = makeNoteOn(channel, note, 100);
-    let noteOffMessage = makeNoteOff(channel, note);
-    // When scheduling an event to occur in the future, use the current audio context time
-    // multiplied by 1000 (converting seconds to milliseconds) for now.
     let noteOnEvent = new MIDIEvent(device.context.currentTime * 1000, port, noteOnMessage);
-    let noteOffEvent = new MIDIEvent(device.context.currentTime * 1000 + noteDurationMs, port, noteOffMessage);
     device.scheduleEvent(noteOnEvent);
-    device.scheduleEvent(noteOffEvent);
+    heldNotes.current.push(note);
   }
+  const onMouseUp = () => {
+    heldNotes.current.forEach((note) => {
+      const noteOffMessage = makeNoteOff(channel, note);
+      const noteOffEvent = new MIDIEvent(device.context.currentTime * 1000, port, noteOffMessage);
+      device.scheduleEvent(noteOffEvent);
+    })
+    heldNotes.current = []
+  }
+  const variant = 'secondary'
+
+  useEffect(() => {
+    document.body.addEventListener('mouseup', onMouseUp)
+    return () => {
+      document.body.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
   return (
     <div className="pt-4 pb-4">
       <div className="grid flex-1 items-start gap-4 grid-cols-8">
-        <Button onClick={onClickFn(0, 48)}></Button>
-        <Button onClick={onClickFn(1, 50)}></Button>
-        <Button onClick={onClickFn(2, 52)}></Button>
-        <Button onClick={onClickFn(3, 53)}></Button>
-        <Button onClick={onClickFn(4, 55)}></Button>
-        <Button onClick={onClickFn(5, 57)}></Button>
-        <Button onClick={onClickFn(6, 59)}></Button>
-        <Button onClick={onClickFn(7, 60)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(8, 60)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(9, 62)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(10, 64)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(11, 65)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(12, 67)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(13, 69)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(14, 71)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(15, 72)}></Button>
 
-        <Button onClick={onClickFn(8, 60)}></Button>
-        <Button onClick={onClickFn(9, 62)}></Button>
-        <Button onClick={onClickFn(10, 64)}></Button>
-        <Button onClick={onClickFn(11, 65)}></Button>
-        <Button onClick={onClickFn(12, 67)}></Button>
-        <Button onClick={onClickFn(13, 69)}></Button>
-        <Button onClick={onClickFn(14, 71)}></Button>
-        <Button onClick={onClickFn(15, 72)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(0, 48)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(1, 50)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(2, 52)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(3, 53)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(4, 55)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(5, 57)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(6, 59)}></Button>
+        <Button variant={variant} onMouseDown={onMouseDownFn(7, 60)}></Button>
       </div>
     </div>
   )
@@ -224,8 +295,12 @@ function Home() {
       throw new Error('No audio context exists. Cannot start Chiaro.')
     }
     const device = await startAudio(contextRef.current)
-    console.log(device.parameters.map((param) => param.name).join(' '))
     setDevice(device)
+  }
+
+  const randomizeClicked = () => {
+    if (!device) return
+    randomizeParams({ device })
   }
 
   return (
@@ -246,6 +321,9 @@ function Home() {
 
         <div className="pb-4">
           <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Parameters</h2>
+
+          <Button variant="outline" onClick={randomizeClicked}>Randomize</Button>
+
           <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-4">
             <div>
               <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 1</h3>
