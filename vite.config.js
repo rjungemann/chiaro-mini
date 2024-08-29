@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname);
-  const nodeEnv = env.NODE_ENV ?? 'development'
+  const nodeEnv = env.NODE_ENV ?? 'production'
   const isDevelopment = nodeEnv === 'development'
   return {
     ...(isDevelopment ? {} : { base: '/chiaro-mini/' }),
