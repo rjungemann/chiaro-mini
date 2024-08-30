@@ -467,17 +467,22 @@ function Home() {
 
   if (!device) {
     return (
-      <main className="flex flex-col items-center justify-center w-full h-full bg-secondary">
-        <h1 className="text-2xl font-semibold leading-none tracking-tight pb-4">
-          Chiaro
-          {' '}
-          <span className="font-normal">Mini</span>
-        </h1>
-        <p className="text-sm text-muted-foreground pb-4">
-          A unique vocal synth, rebuilt
-        </p>
-        <div>
-          <Button onClick={startDevice}>Start</Button>
+      <main className="flex items-center justify-center w-full h-full bg-secondary">
+        <div className="flex flex-col">
+          <h1 className="bebas-neue text-4xl leading-none">
+            <span className="text-red-500">Chiaro</span>
+            {' '}
+            <span className="text-orange-500">Mini</span>
+          </h1>
+          <h2 className="bebas-neue text-muted-foreground text-xl leading-none pb-2 mb-2">
+            By Phasor Space
+          </h2>
+          <p className="text-sm text-muted-foreground pb-4 mb-2">
+            A unique vocal synth, rebuilt
+          </p>
+          <div className="flex items-center justify-center">
+            <Button onClick={startDevice}>Start</Button>
+          </div>
         </div>
       </main>
     )
@@ -493,10 +498,12 @@ function Home() {
       <div className="absolute left-2 w-full h-full">
         <main className="p-4">
           <div className="flex justify-between items-baseline">
-            <h1 className="text-2xl font-semibold leading-none tracking-tight pb-4">
-              Chiaro
+            <h1 className="bebas-neue text-4xl leading-none pb-2">
+              <span className="text-red-500">Chiaro</span>
               {' '}
-              <span className="font-normal">Mini</span>
+              <span className="text-orange-500">Mini</span>
+              {' '}
+              <span className="text-muted-foreground text-xl ml-1">By Phasor Space</span>
             </h1>
             <ModeToggle />
           </div>
