@@ -1,5 +1,5 @@
 import { createContext, MutableRefObject, ReactNode, useContext, useEffect, useRef, useState } from 'react'
-import { createDevice, Device } from '@rnbo/js';
+import { createDevice, Device, MIDIByte, MIDIData, MIDIEvent, TimeNow } from '@rnbo/js';
 
 type SynthState = {
   context: AudioContext | null
@@ -72,15 +72,6 @@ const SynthContext = createContext<SynthContextState>(defaultSynthContextState)
 export const SynthProvider = ({ children }: { children: ReactNode }) => {
   const isChangingRef = useRef<boolean>(false)
   const [state, setState] = useState<SynthState>({ ...defaultSynthState, isChangingRef })
-  return (
-    <SynthContext.Provider value={{ state, setState }}>
-      {children}
-    </SynthContext.Provider>
-  )
-}
-
-export const useSynth = () => {
-  const { state, setState } = useContext(SynthContext)
 
   useEffect(() => {
     if (!state) return
@@ -134,9 +125,14 @@ export const useSynth = () => {
     if (!state) return
     if (!state.inport) return
     const inport = state.inports[state.inport]
-    if (!inport) return
     const callback = (message: MIDIMessageEvent) => {
-      console.log('MIDI Message', message.data)
+      if (!state.device) return
+      if (!message.data) return
+      const timestamp = state.device.context.currentTime * 1000
+      const port = 0
+      const evt: MIDIEvent = new MIDIEvent(timestamp, port, [message.data[0], message.data[1], message.data[2]])
+      console.log('MIDI Input event sent to Chiaro', evt)
+      state.device.scheduleEvent(evt)
     }
     inport.addEventListener("midimessage", callback)
     return () => {
@@ -161,6 +157,16 @@ export const useSynth = () => {
       startDevice,
     })
   }, [])
+
+  return (
+    <SynthContext.Provider value={{ state, setState }}>
+      {children}
+    </SynthContext.Provider>
+  )
+}
+
+export const useSynth = () => {
+  const { state, setState } = useContext(SynthContext)
 
   return { state, setState }
 }

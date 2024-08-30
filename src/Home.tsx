@@ -13,8 +13,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadio
 // device.getPreset()
 // .then((p) => console.log(JSON.stringify(p, null, 2)))
 
-// TODO: MIDI
-
 // TODO: Scales
 
 // TODO: Import patch
