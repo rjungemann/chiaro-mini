@@ -6,7 +6,9 @@ type SynthState = {
   device: Device | null
   startDevice: () => void
   isChangingRef: MutableRefObject<boolean> | null
-  midi: MIDIAccess | null // TODO: Remove any
+  midi: MIDIAccess | null
+  inports: Record<string, MIDIInput>
+  inport: string | null
 }
 
 type SynthContextState = {
@@ -20,7 +22,9 @@ const defaultSynthState = {
   startDevice: () => { throw new Error('Not implemented') },
   isChangingRef: null,
   setIsChanging: (value: boolean) => {},
-  midi: null
+  midi: null,
+  inports: {},
+  inport: null,
 }
 
 const defaultSynthContextState = {
@@ -85,13 +89,60 @@ export const useSynth = () => {
     
     navigator.requestMIDIAccess()
     .then((midi: MIDIAccess) => {
-      setState({ ...state, midi })
+      const inports: Record<string, MIDIInput> = {}
+      midi.inputs.forEach((value: MIDIInput, key: string) => {
+        inports[value.id] = value
+      })
+      setState({
+        ...state,
+        midi,
+        inports,
+        inport: Object.keys(inports)[0],
+      })
       console.info("Initialized MIDI", midi);
     })
     .catch((err: Error) => {
       console.error(`Failed to get MIDI access`, err);
     });
   }, [state])
+
+  useEffect(() => {
+    if (!state) return
+    if (!state.midi) return
+    const callback = (ev: Event) => {
+      const event = ev as MIDIConnectionEvent
+      if (!event.port) return
+      if (event.type !== "input") return
+      if (event.port.state === "disconnected") {
+        const { [event.port.id]: id, ...inports } = state.inports
+        setState({ ...state, inports })
+      } else {
+        const inport = event.port as MIDIInput
+        const inports = { ...state.inports, [event.port.id]: inport }
+        setState({ ...state, inports })
+      }
+    }
+    state.midi.addEventListener("statechange", callback)
+    return () => {
+      if (!state) return
+      if (!state.midi) return
+      state.midi.removeEventListener("statechange", callback)
+    }
+  }, [state.midi])
+
+  useEffect(() => {
+    if (!state) return
+    if (!state.inport) return
+    const inport = state.inports[state.inport]
+    if (!inport) return
+    const callback = (message: MIDIMessageEvent) => {
+      console.log('MIDI Message', message.data)
+    }
+    inport.addEventListener("midimessage", callback)
+    return () => {
+      inport.removeEventListener("midimessage", callback)
+    }
+  }, [state.inport])
 
   useEffect(() => {
     if (state.context && state.device) return;

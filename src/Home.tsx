@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { ModeToggle } from '@/components/mode-toggle';
 import { useSynth } from '@/state/useSynth';
 import { Textarea } from './components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
 
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
@@ -446,7 +447,7 @@ const Params = () => {
 }
 
 function Home() {
-  const { state, state: { device, startDevice } } = useSynth()
+  const { state, state: { device, startDevice }, setState } = useSynth()
   const [patch, setPatch] = useState<IPreset | null>(null);
 
   const randomizeClicked = () => {
@@ -484,6 +485,11 @@ function Home() {
     )
   }
 
+  const onInputChangeFn = (id: string) => () => {
+    console.log('input change', id)
+    setState({ ...state, inport: id })
+  }
+
   return (
     <div className="relative w-full h-full">
       <div className="absolute left-2 w-full h-full">
@@ -498,7 +504,29 @@ function Home() {
           </div>
           
           <div className="pb-4">
-            <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
+            <div className="flex justify-between items-baseline">
+              <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
+
+              {state.midi && (
+                <div className="flex gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">Input Ports</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      <DropdownMenuRadioGroup value={state.inport || undefined}>
+                        {Object.values(state.inports).map((port: MIDIInput) => {
+                          return (
+                            <DropdownMenuRadioItem onSelect={onInputChangeFn(port.id)} key={port.id} value={port.id}>{port.name}</DropdownMenuRadioItem>
+                          )
+                        })}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+            </div>
+            
             <Keyboard device={device} />
           </div>
 
