@@ -8,6 +8,10 @@ import { useSynth } from '@/state/useSynth';
 import { Textarea } from './components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
 
+// TODO: Separate touch events
+
+// TODO: Responsive keyboard (split into 4 chunks, render those as 2 or 4 rows in proper order)
+
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
 // device.getPreset()
@@ -247,21 +251,29 @@ const Keyboard = ({ device }: { device: Device }) => {
   const variant = 'secondary'
 
   useEffect(() => {
-    document.body.addEventListener('mouseup', onMouseUp)
+    document.body.addEventListener('pointerup', onMouseUp)
     return () => {
-      document.body.removeEventListener('mouseup', onMouseUp)
+      document.body.removeEventListener('pointerup', onMouseUp)
     }
   }, [])
 
-  const indices = [8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]
-  const notes = [60, 62, 64, 65, 67, 69, 71, 72, 48, 50, 52, 53, 55, 57, 59, 60]
-  const indexNotes = indices.map((n, i) => [n, notes[i]])
+  const indices4 = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3]
+  const notes4 = [67, 69, 71, 72, 60, 62, 64, 65, 55, 57, 59, 60, 48, 50, 52, 53]
+  const indices8 = [8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]
+  const notes8 = [60, 62, 64, 65, 67, 69, 71, 72, 48, 50, 52, 53, 55, 57, 59, 60]
+  const index4Notes = indices4.map((n, i) => [n, notes4[i]])
+  const index8Notes = indices8.map((n, i) => [n, notes8[i]])
 
   return (
     <div className="pt-4 pb-4">
-      <div className="grid flex-1 items-start gap-4 grid-cols-8">
-        {indexNotes.map(([index, note]) => (
-          <Button className="h-36" key={index} variant="secondary" onMouseDown={onMouseDownFn(index, note)}></Button>
+      <div className="grid flex-1 items-start gap-4 grid-cols-4 md:hidden">
+        {index4Notes.map(([index, note]) => (
+          <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}></Button>
+        ))}
+      </div>
+      <div className="grid flex-1 items-start gap-4 grid-cols-8 hidden md:grid">
+        {index8Notes.map(([index, note]) => (
+          <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}></Button>
         ))}
       </div>
     </div>
@@ -288,39 +300,51 @@ const Slider2 = ({ onChange, value }: { onChange: (value: Point2) => void, value
     // setVal(value)
   }, [value])
 
-  const onMouseDown = (ev: React.MouseEvent) => {
+  const onMouseDown = (ev: any) => {
     if (!isChangingRef) return
+    ev.preventDefault()
     isChangingRef.current = true
   }
-  const onMouseMove = (ev: React.MouseEvent) => {
+  const onMouseMove = (ev: any) => {
     if (!svgRef.current) return;
     if (!ellipseRef.current) return;
     if (!isChangingRef) return;
     if (!isChangingRef.current) return;
+    ev.preventDefault()
     const pt = svgRef.current.createSVGPoint();
-    pt.x = ev.clientX;
-    pt.y = ev.clientY;
+    pt.x = 'clientX' in ev ? ev.clientX : ev.touches[0].clientX
+    pt.y = 'clientY' in ev ? ev.clientY : ev.touches[0].clientY
     const loc = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
     const elem: SVGElement = ellipseRef.current
     elem.setAttribute("cx", loc.x.toFixed(1))
     elem.setAttribute("cy", loc.y.toFixed(1))
     const newValue = { x: loc.x / width, y: loc.y / height }
-    // valRef.current = newValue
     onChange(newValue)
   }
   useEffect(() => {
-    const onMouseUp = (ev: MouseEvent): any => {
+    const onMouseUp = (ev: any): any => {
       if (!isChangingRef) return
+      ev.preventDefault()
       isChangingRef.current = false
     }
-    document.body.addEventListener('mouseup', onMouseUp)
+    svgRef.current?.addEventListener('mousedown', onMouseDown, { passive: false })
+    svgRef.current?.addEventListener('mousemove', onMouseMove, { passive: false })
+    document.body.addEventListener('mouseend', onMouseUp, { passive: false })
+    svgRef.current?.addEventListener('touchstart', onMouseDown, { passive: false })
+    svgRef.current?.addEventListener('touchmove', onMouseMove, { passive: false })
+    document.body.addEventListener('touchend', onMouseUp, { passive: false })
     return () => {
-      document.body.removeEventListener('mouseup', onMouseUp)
+      svgRef.current?.removeEventListener('mousedown', onMouseDown)
+      svgRef.current?.removeEventListener('mousemove', onMouseMove)
+      document.body.removeEventListener('mouseend', onMouseUp)
+      svgRef.current?.removeEventListener('touchstart', onMouseDown)
+      svgRef.current?.removeEventListener('touchmove', onMouseMove)
+      document.body.removeEventListener('touchend', onMouseUp)
     }
   }, [])
 
   return (
-    <svg ref={svgRef} onMouseDown={onMouseDown} onMouseMove={onMouseMove} className="w-full aspect-square bg-secondary mt-4 mb-4 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
+    <svg ref={svgRef} className="w-full aspect-square bg-secondary mt-4 mb-4 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
       <ellipse ref={ellipseRef} stroke="currentColor" fill="none" strokeWidth="1" cx={defaultX} cy={defaultY} rx="4" ry="4" />
     </svg>
   )
@@ -341,7 +365,6 @@ const Params = () => {
     const callback = (updatedParam: any) => {
       if (!isChangingRef) return
       if (isChangingRef.current) return
-      // console.info('Received param update from device', updatedParam)
       if (updatedParam.id === 'synth/shaper-x-1') setOsc1Loc({ ...osc1Loc, x: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-y-1') setOsc1Loc({ ...osc1Loc, y: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-x-2') setOsc2Loc({ ...osc2Loc, x: updatedParam.value })
@@ -368,7 +391,7 @@ const Params = () => {
   }
   
   return (
-    <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-4">
+    <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
       <div className="text-red-500">
         <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 1</h3>
         <Param device={device} param={device.parameters.find((param) => `synth/harm-1` === param.id)} />
@@ -411,7 +434,6 @@ const Params = () => {
           sections['global']
           .map((id) => device.parameters.find((param) => id === param.id))
           .map((param) => {
-            // console.log(param)
             return (
               <Param key={param.id} device={device} param={param} />
             )
@@ -489,13 +511,13 @@ function Home() {
   }
 
   const onInputChangeFn = (id: string) => () => {
-    console.log('input change', id)
+    console.log('Input changed', id)
     setState({ ...state, inport: id })
   }
 
   return (
     <div className="relative w-full h-full">
-      <div className="absolute left-2 w-full h-full">
+      <div className="absolute w-full h-full">
         <main className="p-4">
           <div className="flex justify-between items-baseline">
             <h1 className="bebas-neue text-4xl leading-none pb-2">
