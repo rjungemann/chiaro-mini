@@ -8,18 +8,12 @@ import { useSynth } from '@/state/useSynth';
 import { Textarea } from './components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
 
-// TODO: Separate touch events
-
-// TODO: Responsive keyboard (split into 4 chunks, render those as 2 or 4 rows in proper order)
-
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
 // device.getPreset()
 // .then((p) => console.log(JSON.stringify(p, null, 2)))
 
 // TODO: Scales
-
-// TODO: Import patch
 
 // TODO: Copy preset to clipboard
 
@@ -89,6 +83,7 @@ const names: Record<string, string> = {
   'synth/s-2': 'Sustain',
   'synth/r-2': 'Release',
   'synth/gain-2': 'Gain',
+  'synth/coarse-2': 'Coarse',
 
   'synth/harm-3': 'Harmonics',
   'synth/shaper-x-3': 'Shaper X',
@@ -99,6 +94,7 @@ const names: Record<string, string> = {
   'synth/s-3': 'Sustain',
   'synth/r-3': 'Release',
   'synth/gain-3': 'Gain',
+  'synth/coarse-3': 'Coarse',
 
   'synth/vel-amt': 'Velocity Amount',
   'synth/gain-mix': 'Gain Mix',
@@ -143,6 +139,7 @@ const randomizeParams = ({ device }: { device: Device }) => {
     if (param.id.match(/^synth\/gain-/)) return;
     if (param.id.match(/^synth\/vibrato-/)) return;
     if (param.id.match(/^synth\/slop-/)) return;
+    if (param.id.match(/^synth\/coarse-/)) return;
     if (param.id.match(/^chorus\//)) return;
     if (param.id.match(/^reverb\//)) return;
     // Shaper settings
@@ -410,6 +407,7 @@ const Params = () => {
         <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} />
         <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} />
         <Slider2 value={osc2Loc} onChange={onSlider2ChangeFn(2)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/coarse-2` === param.id)} />
         <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} />
         <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} />
         <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} />
@@ -422,6 +420,7 @@ const Params = () => {
         <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
         <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} />
         <Slider2 value={osc3Loc} onChange={onSlider2ChangeFn(3)} />
+        <Param device={device} param={device.parameters.find((param) => `synth/coarse-3` === param.id)} />
         <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} />
         <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} />
         <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} />
@@ -468,11 +467,17 @@ const Params = () => {
 
 function Home() {
   const { state, state: { device, startDevice }, setState } = useSynth()
-  const [patch, setPatch] = useState<IPreset | null>(null);
+  const [isImportingPatch, setIsImportingPatch] = useState<boolean>(false)
+  const [patchToImport, setPatchToImport] = useState<string | null>(null)
+  const [patch, setPatch] = useState<IPreset | null>(null)
 
   const randomizeClicked = () => {
     if (!device) return
     randomizeParams({ device })
+  }
+
+  const importPatchClicked = () => {
+    setIsImportingPatch(true)
   }
 
   const exportPatchClicked = () => {
@@ -485,6 +490,24 @@ function Home() {
 
   const clearPatch = () => {
     setPatch(null)
+  }
+
+  const patchToImportChanged = (ev: ChangeEvent<HTMLTextAreaElement>) => {
+    setPatchToImport(ev.target.value)
+  }
+
+  const cancelImportPatch = () => {
+    setIsImportingPatch(false)
+    setPatchToImport(null)
+  }
+
+  const finishImportPatch = () => {
+    if (!device) return
+    if (!patchToImport) return
+    const patch = JSON.parse(patchToImport)
+    device.setPreset(patch)
+    setIsImportingPatch(false)
+    setPatchToImport(null)
   }
 
   if (!device) {
@@ -563,6 +586,7 @@ function Home() {
 
               <div className="flex gap-2">
                 <Button variant="outline" onClick={randomizeClicked}>Randomize</Button>
+                <Button variant="outline" onClick={importPatchClicked}>Import Patch</Button>
                 <Button variant="outline" onClick={exportPatchClicked}>Export Patch</Button>
               </div>
             </div>
@@ -579,10 +603,34 @@ function Home() {
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm lg:max-w-md">
               <div className="flex flex-col p-6 space-y-0 pb-6 gap-2">
                 <h3 className="font-semibold tracking-tight text-2xl pb-2">Export Patch</h3>
-                <Textarea onClick={(ev) => (ev.currentTarget as unknown as any).select()} className="w-96">
-                  {JSON.stringify(patch)}
-                </Textarea>
+                <div className="pb-2">
+                  <Textarea onClick={(ev) => (ev.currentTarget as unknown as any).select()} className="w-96">
+                    {JSON.stringify(patch)}
+                  </Textarea>
+                </div>
                 <Button onClick={clearPatch}>Done</Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {isImportingPatch && (
+        <>
+          <div className="absolute left-0 w-full h-full bg-secondary opacity-50"></div>
+          <div className="absolute left-0 w-full h-full flex justify-center items-center">
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm lg:max-w-md">
+              <div className="flex flex-col p-6 space-y-0 pb-6 gap-2">
+                <h3 className="font-semibold tracking-tight text-2xl pb-2">Import Patch</h3>
+                <div className="pb-2">
+                  <Textarea className="w-96" onChange={patchToImportChanged}>
+                    {patchToImport}
+                  </Textarea>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={cancelImportPatch} variant="outline">Cancel</Button>
+                  <Button onClick={finishImportPatch}>Done</Button>
+                </div>
               </div>
             </div>
           </div>

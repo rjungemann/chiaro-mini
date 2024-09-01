@@ -77,24 +77,27 @@ export const SynthProvider = ({ children }: { children: ReactNode }) => {
     if (!state) return
     if (!state.device) return
     if (state.midi) return
-    
-    navigator.requestMIDIAccess()
-    .then((midi: MIDIAccess) => {
-      const inports: Record<string, MIDIInput> = {}
-      midi.inputs.forEach((value: MIDIInput, key: string) => {
-        inports[value.id] = value
+    try {
+      navigator.requestMIDIAccess()
+      .then((midi: MIDIAccess) => {
+        const inports: Record<string, MIDIInput> = {}
+        midi.inputs.forEach((value: MIDIInput, key: string) => {
+          inports[value.id] = value
+        })
+        setState({
+          ...state,
+          midi,
+          inports,
+          inport: Object.keys(inports)[0],
+        })
+        console.info("Initialized MIDI", midi);
       })
-      setState({
-        ...state,
-        midi,
-        inports,
-        inport: Object.keys(inports)[0],
-      })
-      console.info("Initialized MIDI", midi);
-    })
-    .catch((err: Error) => {
-      console.error(`Failed to get MIDI access`, err);
-    });
+      .catch((err: Error) => {
+        console.error(`Failed to get MIDI access`, err);
+      });
+    } catch (err) {
+      console.error(err)
+    }
   }, [state])
 
   useEffect(() => {
