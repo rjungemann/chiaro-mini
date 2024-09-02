@@ -224,6 +224,8 @@ const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
 
 const Keyboard = ({ device }: { device: Device }) => {
   let heldNotes = useRef<number[]>([])
+  const [currentKey, setCurrentKey] = useState<string>('C')
+  const [currentScale, setCurrentScale] = useState<string>('major')
 
   let channel = 0;
   let port = 0;
@@ -254,24 +256,117 @@ const Keyboard = ({ device }: { device: Device }) => {
     }
   }, [])
 
+  const baseNote = 60
   const indices4 = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3]
-  const notes4 = [67, 69, 71, 72, 60, 62, 64, 65, 55, 57, 59, 60, 48, 50, 52, 53]
+  // const notes4 = [67, 69, 71, 72, 60, 62, 64, 65, 55, 57, 59, 60, 48, 50, 52, 53]
   const indices8 = [8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]
-  const notes8 = [60, 62, 64, 65, 67, 69, 71, 72, 48, 50, 52, 53, 55, 57, 59, 60]
-  const index4Notes = indices4.map((n, i) => [n, notes4[i]])
-  const index8Notes = indices8.map((n, i) => [n, notes8[i]])
+  // const notes8 = [60, 62, 64, 65, 67, 69, 71, 72, 48, 50, 52, 53, 55, 57, 59, 60]
+
+  const keyMap: Record<string, number> = {
+    'C': 0,
+    'C#': 1,
+    'D': 2,
+    'D#': 3,
+    'E': 4,
+    'F': 5,
+    'F#': 6,
+    'G': 7,
+    'G#': 8,
+    'A': 9,
+    'A#': 10,
+    'B': 11
+  }
+  const scaleMap: Record<string, number[]> = {
+    'major': [0, 2, 4, 5, 7, 9, 11, 12, 12, 14, 16, 17, 19, 21, 23, 24],
+    'minor': [0, 2, 3, 5, 7, 8, 10, 12, 12, 14, 15, 17, 19, 20, 22, 24]
+  }
+  const scaleTitles: Record<string, string> = {
+    'major': 'Major', 
+    'minor': 'Minor'
+  }
+
+  // const index4Notes = indices4.map((n, i) => [n, notes4[i]])
+  // const index8Notes = indices8.map((n, i) => [n, notes8[i]])
+  const index4Notes = indices4.map((n, i) => {
+    const keyOffset = keyMap[currentKey]
+    if (keyOffset === undefined) throw new Error(`Could not find key offset for key of ${currentKey}`)
+    const scaleIndex = indices4[i]
+    if (scaleIndex === undefined) throw new Error('Could not find scale index')
+    const scaleIndices = scaleMap[currentScale]
+    if (!scaleIndices) throw new Error(`Could not find scale ${currentScale}`)
+    const scaleOffset = scaleIndices[scaleIndex]
+    if (scaleOffset === undefined) throw new Error('Could not find scale offset')
+    const value: number = baseNote + keyOffset + scaleOffset
+    return [n, value]
+  })
+  const index8Notes = indices8.map((n, i) => {
+    const keyOffset = keyMap[currentKey]
+    if (keyOffset === undefined) throw new Error(`Could not find key offset for key of ${currentKey}`)
+    const scaleIndex = indices8[i]
+    if (scaleIndex === undefined) throw new Error('Could not find scale index')
+    const scaleIndices = scaleMap[currentScale]
+    if (!scaleIndices) throw new Error(`Could not find scale ${currentScale}`)
+    const scaleOffset = scaleIndices[scaleIndex]
+    if (scaleOffset === undefined) throw new Error('Could not find scale offset')
+    const value: number = baseNote + keyOffset + scaleOffset
+    return [n, value]
+  })
+
+  const onKeyChangeFn = (keyName: string) => () => {
+    setCurrentKey(keyName)
+  }
+  const onScaleChangeFn = (scaleName: string) => () => {
+    setCurrentScale(scaleName)
+  }
 
   return (
     <div className="pt-4 pb-4">
       <div className="grid flex-1 items-start gap-4 grid-cols-4 md:hidden">
         {index4Notes.map(([index, note]) => (
-          <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}></Button>
+          <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
+          </Button>
         ))}
       </div>
+
       <div className="grid flex-1 items-start gap-4 grid-cols-8 hidden md:grid">
         {index8Notes.map(([index, note]) => (
-          <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}></Button>
+          <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
+          </Button>
         ))}
+      </div>
+
+      <div className="flex gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Key</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuRadioGroup value={undefined}>
+              {Object.keys(keyMap).map((keyName: string) => {
+                const keyValue = keyMap[keyName]
+                return (
+                  <DropdownMenuRadioItem onSelect={onKeyChangeFn(keyName)} key={keyName} value={keyName}>{keyName}</DropdownMenuRadioItem>
+                )
+              })}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Scale</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuRadioGroup value={undefined}>
+              {Object.keys(scaleMap).map((scaleName: string) => {
+                const scaleValue = scaleMap[scaleName]
+                return (
+                  <DropdownMenuRadioItem  onSelect={onScaleChangeFn(scaleName)} key={scaleName} value={scaleName}>{scaleTitles[scaleName]}</DropdownMenuRadioItem>
+                )
+              })}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
@@ -563,7 +658,7 @@ function Home() {
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline">Input Ports</Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56">
+                    <DropdownMenuContent>
                       <DropdownMenuRadioGroup value={state.inport || undefined}>
                         {Object.values(state.inports).map((port: MIDIInput) => {
                           return (
