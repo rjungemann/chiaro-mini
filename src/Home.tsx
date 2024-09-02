@@ -10,12 +10,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadio
 
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
+// // Get a preset
 // device.getPreset()
 // .then((p) => console.log(JSON.stringify(p, null, 2)))
+// // Load a preset
+// const preset = patcher.presets[0]
+// // A preset has a preset and an index
+// device.setPreset(preset.preset);
 
-// TODO: Scales
-
-// TODO: Copy preset to clipboard
+// TODO: Test copying and pasting preset to clipboard
 
 // // TODO: Send events to device
 // // Turn the text into a list of numbers (RNBO messages must be numbers, not text)
@@ -24,10 +27,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadio
 // let messageEvent = new RNBO.MessageEvent(RNBO.TimeNow, inportTag, values);
 // device.scheduleEvent(messageEvent);
 
-// // Load a preset
-// const preset = patcher.presets[0]
-// // A preset has a preset and an index
-// device.setPreset(preset.preset);
 
 // type Preset = {
 //   __presetid: "rnbo",
@@ -37,6 +36,63 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadio
 //     synth: Record<string, string>[] // gain-1, harm-1, etc.
 //   }
 // }
+
+const CubeIcon = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="15"
+      height="15"
+      fill="none"
+      viewBox="0 0 15 15"
+    >
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        d="M7.289.797a.5.5 0 01.422 0l6 2.8A.5.5 0 0114 4.05v6.9a.5.5 0 01-.289.453l-6 2.8a.5.5 0 01-.422 0l-6-2.8A.5.5 0 011 10.95v-6.9a.5.5 0 01.289-.453l6-2.8zM2 4.806L7 6.93v6.034l-5-2.333V4.806zm6 8.159l5-2.333V4.806L8 6.93v6.034zm-.5-6.908l4.772-2.028L7.5 1.802 2.728 4.029 7.5 6.057z"
+        clipRule="evenodd"
+      ></path>
+    </svg>
+  );
+}
+
+const DownloadIcon = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="15"
+      height="15"
+      fill="none"
+      viewBox="0 0 15 15"
+    >
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        d="M7.5 1.05a.45.45 0 01.45.45v6.914l2.232-2.232a.45.45 0 11.636.636l-3 3a.45.45 0 01-.636 0l-3-3a.45.45 0 11.636-.636L7.05 8.414V1.5a.45.45 0 01.45-.45zM2.5 10a.5.5 0 01.5.5V12c0 .554.446 1 .996 1h7.005A.999.999 0 0012 12v-1.5a.5.5 0 011 0V12c0 1.104-.894 2-1.999 2H3.996A1.997 1.997 0 012 12v-1.5a.5.5 0 01.5-.5z"
+        clipRule="evenodd"
+      ></path>
+    </svg>
+  );
+}
+
+const UploadIcon = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="15"
+      height="15"
+      fill="none"
+      viewBox="0 0 15 15"
+    >
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        d="M7.818 1.182a.45.45 0 00-.636 0l-3 3a.45.45 0 10.636.636L7.05 2.586V9.5a.45.45 0 10.9 0V2.586l2.232 2.232a.45.45 0 10.636-.636l-3-3zM2.5 10a.5.5 0 01.5.5V12c0 .554.446 1 .996 1h7.005A.999.999 0 0012 12v-1.5a.5.5 0 111 0V12a2 2 0 01-1.999 2H3.996A1.997 1.997 0 012 12v-1.5a.5.5 0 01.5-.5z"
+        clipRule="evenodd"
+      ></path>
+    </svg>
+  );
+}
 
 type DeviceParam = {
   id: string
@@ -321,24 +377,26 @@ const Keyboard = ({ device }: { device: Device }) => {
 
   return (
     <div className="pt-4 pb-4">
-      <div className="grid flex-1 items-start gap-4 grid-cols-4 md:hidden">
+      <div className="grid flex-1 items-start gap-4 grid-cols-4 md:hidden pb-4">
         {index4Notes.map(([index, note]) => (
           <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
           </Button>
         ))}
       </div>
 
-      <div className="grid flex-1 items-start gap-4 grid-cols-8 hidden md:grid">
+      <div className="grid flex-1 items-start gap-4 grid-cols-8 hidden md:grid pb-4">
         {index8Notes.map(([index, note]) => (
           <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
           </Button>
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-baseline">
+        <span className="font-semibold tracking-tight">Key</span>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline">Key</Button>
+            <Button variant="outline">{currentKey}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuRadioGroup value={undefined}>
@@ -354,7 +412,7 @@ const Keyboard = ({ device }: { device: Device }) => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline">Scale</Button>
+            <Button variant="outline">{scaleTitles[currentScale]}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuRadioGroup value={undefined}>
@@ -408,9 +466,11 @@ const Slider2 = ({ onChange, value }: { onChange: (value: Point2) => void, value
     pt.y = 'clientY' in ev ? ev.clientY : ev.touches[0].clientY
     const loc = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
     const elem: SVGElement = ellipseRef.current
-    elem.setAttribute("cx", loc.x.toFixed(1))
-    elem.setAttribute("cy", loc.y.toFixed(1))
-    const newValue = { x: loc.x / width, y: loc.y / height }
+    const x = Math.max(Math.min(loc.x, width), 0.0)
+    const y = Math.max(Math.min(loc.y, height), 0.0)
+    elem.setAttribute("cx", x.toFixed(1))
+    elem.setAttribute("cy", y.toFixed(1))
+    const newValue = { x, y }
     onChange(newValue)
   }
   useEffect(() => {
@@ -421,24 +481,26 @@ const Slider2 = ({ onChange, value }: { onChange: (value: Point2) => void, value
     }
     svgRef.current?.addEventListener('mousedown', onMouseDown, { passive: false })
     svgRef.current?.addEventListener('mousemove', onMouseMove, { passive: false })
-    document.body.addEventListener('mouseend', onMouseUp, { passive: false })
+    document.body.addEventListener('mouseup', onMouseUp, { passive: false })
     svgRef.current?.addEventListener('touchstart', onMouseDown, { passive: false })
     svgRef.current?.addEventListener('touchmove', onMouseMove, { passive: false })
-    document.body.addEventListener('touchend', onMouseUp, { passive: false })
+    svgRef.current?.addEventListener('touchend', onMouseUp, { passive: false })
     return () => {
       svgRef.current?.removeEventListener('mousedown', onMouseDown)
       svgRef.current?.removeEventListener('mousemove', onMouseMove)
-      document.body.removeEventListener('mouseend', onMouseUp)
+      document.body.removeEventListener('mouseup', onMouseUp)
       svgRef.current?.removeEventListener('touchstart', onMouseDown)
       svgRef.current?.removeEventListener('touchmove', onMouseMove)
-      document.body.removeEventListener('touchend', onMouseUp)
+      svgRef.current?.removeEventListener('touchend', onMouseUp)
     }
   }, [])
 
   return (
-    <svg ref={svgRef} className="w-full aspect-square bg-secondary mt-4 mb-4 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
-      <ellipse ref={ellipseRef} stroke="currentColor" fill="none" strokeWidth="1" cx={defaultX} cy={defaultY} rx="4" ry="4" />
-    </svg>
+    <div className="w-full aspect-square bg-secondary mt-4 mb-4 p-4">
+      <svg ref={svgRef} className="w-full h-full cursor-pointer overflow-visible" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
+        <ellipse ref={ellipseRef} stroke="currentColor" fill="none" strokeWidth="1" cx={defaultX} cy={defaultY} rx="4" ry="4" />
+      </svg>
+    </div>
   )
 }
 
@@ -653,10 +715,12 @@ function Home() {
               <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
 
               {state.midi && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-baseline">
+                  <span className="font-semibold tracking-tight">MIDI In</span>
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline">Input Ports</Button>
+                      <Button variant="outline">{state.inport && state.inports[state.inport]?.name}</Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuRadioGroup value={state.inport || undefined}>
@@ -680,9 +744,9 @@ function Home() {
               <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Parameters</h2>
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={randomizeClicked}>Randomize</Button>
-                <Button variant="outline" onClick={importPatchClicked}>Import Patch</Button>
-                <Button variant="outline" onClick={exportPatchClicked}>Export Patch</Button>
+                <Button variant="outline" title="Randomize" onClick={randomizeClicked}><CubeIcon /></Button>
+                <Button variant="outline" title="Import Patch" onClick={importPatchClicked}><UploadIcon /></Button>
+                <Button variant="outline" title="Export Patch" onClick={exportPatchClicked}><DownloadIcon /></Button>
               </div>
             </div>
 
