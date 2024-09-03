@@ -392,7 +392,7 @@ const Keyboard = ({ device }: { device: Device }) => {
     <div className="pt-4 pb-4">
       <div className="grid flex-1 items-start gap-4 grid-cols-4 md:hidden pb-4">
         {index4Notes.map(([index, note]) => (
-          <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
+          <Button className="h-36 text-stone-500 text-xl" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
             {noteNames[note % 12]}
           </Button>
         ))}
@@ -400,7 +400,7 @@ const Keyboard = ({ device }: { device: Device }) => {
 
       <div className="grid flex-1 items-start gap-4 grid-cols-8 hidden md:grid pb-4">
         {index8Notes.map(([index, note]) => (
-          <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
+          <Button className="h-36 text-stone-500 text-xl" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
             {noteNames[note % 12]}
           </Button>
         ))}
@@ -512,7 +512,7 @@ const Slider2 = ({ onChange, value }: { onChange: (value: Point2) => void, value
 
   return (
     <div className="w-full aspect-square bg-secondary mt-4 mb-4 p-4">
-      <svg ref={svgRef} className="w-full h-full cursor-pointer overflow-visible" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
+      <svg ref={svgRef} className="w-full h-full cursor-pointer overflow-hidden" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
         <ellipse ref={ellipseRef} stroke="currentColor" fill="none" strokeWidth="1" cx={defaultX} cy={defaultY} rx="4" ry="4" />
       </svg>
     </div>
@@ -621,7 +621,7 @@ const Params = () => {
       <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
         <div className="text-red-500">
           <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Env 1</h3>
-          <div className="flex flex-cols h-60">
+          <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/s-1` === param.id)} orientation="vertical" />
@@ -631,7 +631,7 @@ const Params = () => {
 
         <div className="text-orange-500">
           <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Env 2</h3>
-          <div className="flex flex-cols h-60">
+          <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} orientation="vertical" />
@@ -641,7 +641,7 @@ const Params = () => {
 
         <div className="text-amber-500">
           <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Env 3</h3>
-          <div className="flex flex-cols h-60">
+          <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} orientation="vertical" />
