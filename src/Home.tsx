@@ -7,6 +7,7 @@ import { ModeToggle } from '@/components/mode-toggle';
 import { useSynth } from '@/state/useSynth';
 import { Textarea } from './components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
+import { VerticalSlider } from './components/vertical-slider';
 
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
@@ -153,12 +154,12 @@ const names: Record<string, string> = {
   'synth/coarse-3': 'Coarse',
 
   'synth/vel-amt': 'Velocity Amount',
-  'synth/gain-mix': 'Gain Mix',
+  'synth/gain-mix': 'Dry Level',
   'synth/slop-amt': 'Slop Amount',
   'synth/vibrato-amt': 'Vibrato Amount',
   'synth/vibrato-freq': 'Vibrato Frequency',
   'synth/vibrato-ms': 'Vibrato Speed (ms)',
-  'effect-level': 'Effect Level',
+  'effect-level': 'Send Level',
 
   'chorus/center': 'Center',
   'chorus/bw': 'Bandwidth',
@@ -234,7 +235,7 @@ const randomizeParams = ({ device }: { device: Device }) => {
   })
 }
 
-const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
+const Param = ({ device, param, orientation = "horizontal" }: { device: Device, param: DeviceParam, orientation?: "horizontal" | "vertical" }) => {
   const [value, setValue] = useState<number>(param.initialValue)
   const onSliderChange = ([value]: [number]) => {
     setValue(value)
@@ -270,11 +271,21 @@ const Param = ({ device, param }: { device: Device, param: DeviceParam }) => {
     throw new Error(`Could not find a name for param with id ${param.id}`)
   }
   return (
-    <div className="grid flex-1 items-start gap-2 pt-1 pb-1 grid-cols-3 items-center">
-      <label className="param-label" htmlFor={param.name}>{name}</label>
-      <Slider className="param-slider" id={param.id} value={[value]} onValueChange={onSliderChange} step={steps} min={param.min} max={param.max} />
-      <Input value={value} onChange={onTextChange}></Input>
-    </div>
+    orientation === 'horizontal'
+    ? (
+      <div className="grid flex-1 gap-2 pt-1 pb-1 grid-cols-3 w-full items-center">
+        <label className="param-label" htmlFor={param.name}>{name}</label>
+        <Slider className="param-slider" id={param.id} value={[value]} orientation={orientation} onValueChange={onSliderChange} step={steps} min={param.min} max={param.max} />
+        <Input value={value} onChange={onTextChange}></Input>
+      </div>
+    )
+    : (
+      <div className="grid flex-1 gap-2 pt-1 pb-1 grid-rows-3 h-full items-center justify-items-center">
+        <label className="param-label" htmlFor={param.name}>{name}</label>
+        <VerticalSlider className="param-slider h-full" id={param.id} value={[value]} onValueChange={onSliderChange} step={steps} min={param.min} max={param.max} />
+        <Input className="text-center" value={value} onChange={onTextChange}></Input>
+      </div>
+    )
   )
 }
 
@@ -375,11 +386,14 @@ const Keyboard = ({ device }: { device: Device }) => {
     setCurrentScale(scaleName)
   }
 
+  const noteNames: string[] = 'C C# D D# E F F# G G# A A# B'.split(' ')
+
   return (
     <div className="pt-4 pb-4">
       <div className="grid flex-1 items-start gap-4 grid-cols-4 md:hidden pb-4">
         {index4Notes.map(([index, note]) => (
           <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
+            {noteNames[note % 12]}
           </Button>
         ))}
       </div>
@@ -387,6 +401,7 @@ const Keyboard = ({ device }: { device: Device }) => {
       <div className="grid flex-1 items-start gap-4 grid-cols-8 hidden md:grid pb-4">
         {index8Notes.map(([index, note]) => (
           <Button className="h-36" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
+            {noteNames[note % 12]}
           </Button>
         ))}
       </div>
@@ -545,80 +560,129 @@ const Params = () => {
   }
   
   return (
-    <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
-      <div className="text-red-500">
-        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 1</h3>
-        <Param device={device} param={device.parameters.find((param) => `synth/harm-1` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-1` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/gain-1` === param.id)} />
-        <Slider2 value={osc1Loc} onChange={onSlider2ChangeFn(1)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/s-1` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/r-1` === param.id)} />
+    <>
+      <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
+        <div className="text-red-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">OSC 1</h3>
+          <Param device={device} param={device.parameters.find((param) => `synth/harm-1` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/gain-1` === param.id)} />
+        </div>
+
+        <div className="text-orange-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">OSC 2</h3>
+          <Param device={device} param={device.parameters.find((param) => `synth/harm-2` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/coarse-2` === param.id)} />
+        </div>
+
+        <div className="text-amber-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">OSC 3</h3>
+          <Param device={device} param={device.parameters.find((param) => `synth/harm-3` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/coarse-3` === param.id)} />
+        </div>
+
+        <div>
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Global</h3>
+          <Param device={device} param={device.parameters.find((param) => `synth/vel-amt` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/gain-mix` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `effect-level` === param.id)} />
+        </div>
       </div>
 
-      <div className="text-orange-500">
-        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 2</h3>
-        <Param device={device} param={device.parameters.find((param) => `synth/harm-2` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} />
-        <Slider2 value={osc2Loc} onChange={onSlider2ChangeFn(2)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/coarse-2` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/r-2` === param.id)} />
+      <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
+        <div className="text-red-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Shaper 1</h3>
+          <Slider2 value={osc1Loc} onChange={onSlider2ChangeFn(1)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-1` === param.id)} />
+        </div>
+
+        <div className="text-orange-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Shaper 2</h3>
+          <Slider2 value={osc2Loc} onChange={onSlider2ChangeFn(2)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} />
+        </div>
+
+        <div className="text-amber-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Shaper 3</h3>
+          <Slider2 value={osc3Loc} onChange={onSlider2ChangeFn(3)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
+        </div>
+
+        <div>
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Intonation</h3>
+          <Param device={device} param={device.parameters.find((param) => `synth/slop-amt` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/vibrato-amt` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/vibrato-freq` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/vibrato-ms` === param.id)} />
+        </div>
       </div>
 
-      <div className="text-amber-500">
-        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">OSC 3</h3>
-        <Param device={device} param={device.parameters.find((param) => `synth/harm-3` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} />
-        <Slider2 value={osc3Loc} onChange={onSlider2ChangeFn(3)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/coarse-3` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} />
-        <Param device={device} param={device.parameters.find((param) => `synth/r-3` === param.id)} />
+      <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
+        <div className="text-red-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Env 1</h3>
+          <div className="flex flex-cols h-60">
+            <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-1` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-1` === param.id)} orientation="vertical" />
+          </div>
+        </div>
+
+        <div className="text-orange-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Env 2</h3>
+          <div className="flex flex-cols h-60">
+            <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-2` === param.id)} orientation="vertical" />
+          </div>
+        </div>
+
+        <div className="text-amber-500">
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Env 3</h3>
+          <div className="flex flex-cols h-60">
+            <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-3` === param.id)} orientation="vertical" />
+          </div>
+        </div>
+
+        <div>
+        </div>
       </div>
 
-      <div>
-        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Global</h3>
-        {
-          sections['global']
-          .map((id) => device.parameters.find((param) => id === param.id))
-          .map((param) => {
-            return (
+      <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
+        <div>
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Chorus</h3>
+          {
+            sections['chorus']
+            .map((id) => device.parameters.find((param) => id === param.id))
+            .map((param) => (
               <Param key={param.id} device={device} param={param} />
-            )
-          })
-        }
-      </div>
+            ))
+          }
+        </div>
 
-      <div>
-        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Chorus</h3>
-        {
-          sections['chorus']
-          .map((id) => device.parameters.find((param) => id === param.id))
-          .map((param) => (
-            <Param key={param.id} device={device} param={param} />
-          ))
-        }
-      </div>
+        <div>
+          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Reverb</h3>
+          {
+            sections['reverb']
+            .map((id) => device.parameters.find((param) => id === param.id))
+            .map((param) => (
+              <Param key={param.id} device={device} param={param} />
+            ))
+          }
+        </div>
 
-      <div>
-        <h3 className="text-l font-semibold leading-none tracking-tight pb-4">Reverb</h3>
-        {
-          sections['reverb']
-          .map((id) => device.parameters.find((param) => id === param.id))
-          .map((param) => (
-            <Param key={param.id} device={device} param={param} />
-          ))
-        }
+        <div>
+        </div>
+
+        <div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
