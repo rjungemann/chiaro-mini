@@ -1,13 +1,19 @@
-import { useRef, MutableRefObject, useEffect, useState, ReactSVGElement, ChangeEvent } from 'react';
-import { createDevice, Device, IPreset, MessagePortType, MIDIByte, MIDIEvent } from "@rnbo/js";
+import { useRef, useEffect, useState, ChangeEvent } from 'react';
+import { Device, IPreset, MIDIByte, MIDIEvent } from "@rnbo/js";
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import { ModeToggle } from '@/components/mode-toggle';
-import { useSynth } from '@/state/useSynth';
-import { Textarea } from './components/ui/textarea';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from './components/ui/dropdown-menu';
-import { VerticalSlider } from './components/vertical-slider';
+import { useSynth } from '@/state/use-synth';
+import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { VerticalSlider } from '@/components/vertical-slider';
+import { Slider2 } from '@/components/slider-2';
+import { Keyboard } from '@/components/keyboard';
+import { DeviceParam, Point2 } from '@/types';
+import { CubeIcon } from '@/components/cube-icon';
+import { UploadIcon } from '@/components/upload-icon';
+import { DownloadIcon } from '@/components/download-icon';
 
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
@@ -21,14 +27,6 @@ import { VerticalSlider } from './components/vertical-slider';
 
 // TODO: Test copying and pasting preset to clipboard
 
-// // TODO: Send events to device
-// // Turn the text into a list of numbers (RNBO messages must be numbers, not text)
-// const values = [1.0, 2.0, 3.0];
-// // Send the message event to the RNBO device
-// let messageEvent = new RNBO.MessageEvent(RNBO.TimeNow, inportTag, values);
-// device.scheduleEvent(messageEvent);
-
-
 // type Preset = {
 //   __presetid: "rnbo",
 //   __sps: {
@@ -38,89 +36,12 @@ import { VerticalSlider } from './components/vertical-slider';
 //   }
 // }
 
-const CubeIcon = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="15"
-      height="15"
-      fill="none"
-      viewBox="0 0 15 15"
-    >
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        d="M7.289.797a.5.5 0 01.422 0l6 2.8A.5.5 0 0114 4.05v6.9a.5.5 0 01-.289.453l-6 2.8a.5.5 0 01-.422 0l-6-2.8A.5.5 0 011 10.95v-6.9a.5.5 0 01.289-.453l6-2.8zM2 4.806L7 6.93v6.034l-5-2.333V4.806zm6 8.159l5-2.333V4.806L8 6.93v6.034zm-.5-6.908l4.772-2.028L7.5 1.802 2.728 4.029 7.5 6.057z"
-        clipRule="evenodd"
-      ></path>
-    </svg>
-  );
-}
-
-const DownloadIcon = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="15"
-      height="15"
-      fill="none"
-      viewBox="0 0 15 15"
-    >
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        d="M7.5 1.05a.45.45 0 01.45.45v6.914l2.232-2.232a.45.45 0 11.636.636l-3 3a.45.45 0 01-.636 0l-3-3a.45.45 0 11.636-.636L7.05 8.414V1.5a.45.45 0 01.45-.45zM2.5 10a.5.5 0 01.5.5V12c0 .554.446 1 .996 1h7.005A.999.999 0 0012 12v-1.5a.5.5 0 011 0V12c0 1.104-.894 2-1.999 2H3.996A1.997 1.997 0 012 12v-1.5a.5.5 0 01.5-.5z"
-        clipRule="evenodd"
-      ></path>
-    </svg>
-  );
-}
-
-const UploadIcon = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="15"
-      height="15"
-      fill="none"
-      viewBox="0 0 15 15"
-    >
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        d="M7.818 1.182a.45.45 0 00-.636 0l-3 3a.45.45 0 10.636.636L7.05 2.586V9.5a.45.45 0 10.9 0V2.586l2.232 2.232a.45.45 0 10.636-.636l-3-3zM2.5 10a.5.5 0 01.5.5V12c0 .554.446 1 .996 1h7.005A.999.999 0 0012 12v-1.5a.5.5 0 111 0V12a2 2 0 01-1.999 2H3.996A1.997 1.997 0 012 12v-1.5a.5.5 0 01.5-.5z"
-        clipRule="evenodd"
-      ></path>
-    </svg>
-  );
-}
-
-type DeviceParam = {
-  id: string
-  name: string
-  min: number
-  max: number
-  steps: number
-  value: number
-  initialValue: number
-  displayName: string
-  unit: string
-  exponent: number
-  index: number
-}
-
-type Point2 = {
-  x: number
-  y: number
-}
-
 const sections = {
-  global: 'synth/vel-amt synth/gain-mix synth/slop-amt synth/vibrato-amt synth/vibrato-freq synth/vibrato-ms effect-level'.split(' '),
   chorus: 'chorus/center chorus/bw chorus/rate chorus/fb'.split(' '),
   reverb: 'reverb/drywet reverb/decay reverb/damping reverb/predelay reverb/inbandwidth reverb/indiffusion1 reverb/indiffusion2 reverb/decaydiffusion1 reverb/decaydiffusion2'.split(' '),
 }
 
-const names: Record<string, string> = {
+const paramNames: Record<string, string> = {
   'synth/harm-1': 'Harmonics',
   'synth/shaper-x-1': 'Shaper X',
   'synth/shaper-y-1': 'Shaper Y',
@@ -176,9 +97,6 @@ const names: Record<string, string> = {
   'reverb/decaydiffusion1': 'Decay Diffusion I',
   'reverb/decaydiffusion2': 'Decay Diffusion II',
 }
-
-const makeNoteOn = (channel: number, note: number, velocity: number): [MIDIByte, MIDIByte, MIDIByte] => ([144 + channel, note, velocity])
-const makeNoteOff = (channel: number, note: number): [MIDIByte, MIDIByte, MIDIByte] => ([128 + channel, note, 0])
 
 const scale = (x: number, min: number, max: number, a: number, b: number): number => (
   (((b - a) * (x - min)) / (max - min)) + a
@@ -266,7 +184,7 @@ const Param = ({ device, param, orientation = "horizontal" }: { device: Device, 
     }
   }, [])
 
-  const name = names[param.id]
+  const name = paramNames[param.id]
   if (!name) {
     throw new Error(`Could not find a name for param with id ${param.id}`)
   }
@@ -286,236 +204,6 @@ const Param = ({ device, param, orientation = "horizontal" }: { device: Device, 
         <Input className="text-center" value={value} onChange={onTextChange}></Input>
       </div>
     )
-  )
-}
-
-const Keyboard = ({ device }: { device: Device }) => {
-  let heldNotes = useRef<number[]>([])
-  const [currentKey, setCurrentKey] = useState<string>('C')
-  const [currentScale, setCurrentScale] = useState<string>('major')
-
-  let channel = 0;
-  let port = 0;
-  const onMouseDownFn = (index: number, note: number) => (ev: React.MouseEvent) => {
-    const el = ev.currentTarget as HTMLElement
-    const ratiox = (ev.pageX - el.offsetLeft) / el.offsetWidth
-    const ratioy = (ev.pageY - el.offsetTop) / el.offsetHeight
-    const velocity = Math.floor((1.0 - ratioy) * 128.0)
-    const noteOnMessage = makeNoteOn(channel, note, velocity);
-    const noteOnEvent = new MIDIEvent(device.context.currentTime * 1000, port, noteOnMessage);
-    device.scheduleEvent(noteOnEvent);
-    heldNotes.current.push(note);
-  }
-  const onMouseUp = () => {
-    heldNotes.current.forEach((note) => {
-      const noteOffMessage = makeNoteOff(channel, note);
-      const noteOffEvent = new MIDIEvent(device.context.currentTime * 1000, port, noteOffMessage);
-      device.scheduleEvent(noteOffEvent);
-    })
-    heldNotes.current = []
-  }
-  const variant = 'secondary'
-
-  useEffect(() => {
-    document.body.addEventListener('pointerup', onMouseUp)
-    return () => {
-      document.body.removeEventListener('pointerup', onMouseUp)
-    }
-  }, [])
-
-  const baseNote = 60
-  const indices4 = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3]
-  // const notes4 = [67, 69, 71, 72, 60, 62, 64, 65, 55, 57, 59, 60, 48, 50, 52, 53]
-  const indices8 = [8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7]
-  // const notes8 = [60, 62, 64, 65, 67, 69, 71, 72, 48, 50, 52, 53, 55, 57, 59, 60]
-
-  const keyMap: Record<string, number> = {
-    'C': 0,
-    'C#': 1,
-    'D': 2,
-    'D#': 3,
-    'E': 4,
-    'F': 5,
-    'F#': 6,
-    'G': 7,
-    'G#': 8,
-    'A': 9,
-    'A#': 10,
-    'B': 11
-  }
-  const scaleMap: Record<string, number[]> = {
-    'major': [0, 2, 4, 5, 7, 9, 11, 12, 12, 14, 16, 17, 19, 21, 23, 24],
-    'minor': [0, 2, 3, 5, 7, 8, 10, 12, 12, 14, 15, 17, 19, 20, 22, 24]
-  }
-  const scaleTitles: Record<string, string> = {
-    'major': 'Major', 
-    'minor': 'Minor'
-  }
-
-  // const index4Notes = indices4.map((n, i) => [n, notes4[i]])
-  // const index8Notes = indices8.map((n, i) => [n, notes8[i]])
-  const index4Notes = indices4.map((n, i) => {
-    const keyOffset = keyMap[currentKey]
-    if (keyOffset === undefined) throw new Error(`Could not find key offset for key of ${currentKey}`)
-    const scaleIndex = indices4[i]
-    if (scaleIndex === undefined) throw new Error('Could not find scale index')
-    const scaleIndices = scaleMap[currentScale]
-    if (!scaleIndices) throw new Error(`Could not find scale ${currentScale}`)
-    const scaleOffset = scaleIndices[scaleIndex]
-    if (scaleOffset === undefined) throw new Error('Could not find scale offset')
-    const value: number = baseNote + keyOffset + scaleOffset
-    return [n, value]
-  })
-  const index8Notes = indices8.map((n, i) => {
-    const keyOffset = keyMap[currentKey]
-    if (keyOffset === undefined) throw new Error(`Could not find key offset for key of ${currentKey}`)
-    const scaleIndex = indices8[i]
-    if (scaleIndex === undefined) throw new Error('Could not find scale index')
-    const scaleIndices = scaleMap[currentScale]
-    if (!scaleIndices) throw new Error(`Could not find scale ${currentScale}`)
-    const scaleOffset = scaleIndices[scaleIndex]
-    if (scaleOffset === undefined) throw new Error('Could not find scale offset')
-    const value: number = baseNote + keyOffset + scaleOffset
-    return [n, value]
-  })
-
-  const onKeyChangeFn = (keyName: string) => () => {
-    setCurrentKey(keyName)
-  }
-  const onScaleChangeFn = (scaleName: string) => () => {
-    setCurrentScale(scaleName)
-  }
-
-  const noteNames: string[] = 'C C# D D# E F F# G G# A A# B'.split(' ')
-
-  return (
-    <div className="pt-4 pb-4">
-      <div className="grid flex-1 items-start gap-4 grid-cols-4 md:hidden pb-4">
-        {index4Notes.map(([index, note]) => (
-          <Button className="h-36 text-stone-500 text-xl" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
-            {noteNames[note % 12]}
-          </Button>
-        ))}
-      </div>
-
-      <div className="grid flex-1 items-start gap-4 grid-cols-8 hidden md:grid pb-4">
-        {index8Notes.map(([index, note]) => (
-          <Button className="h-36 text-stone-500 text-xl" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
-            {noteNames[note % 12]}
-          </Button>
-        ))}
-      </div>
-
-      <div className="flex gap-2 items-baseline">
-        <span className="font-semibold tracking-tight">Key</span>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">{currentKey}</Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuRadioGroup value={undefined}>
-              {Object.keys(keyMap).map((keyName: string) => {
-                const keyValue = keyMap[keyName]
-                return (
-                  <DropdownMenuRadioItem onSelect={onKeyChangeFn(keyName)} key={keyName} value={keyName}>{keyName}</DropdownMenuRadioItem>
-                )
-              })}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">{scaleTitles[currentScale]}</Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuRadioGroup value={undefined}>
-              {Object.keys(scaleMap).map((scaleName: string) => {
-                const scaleValue = scaleMap[scaleName]
-                return (
-                  <DropdownMenuRadioItem  onSelect={onScaleChangeFn(scaleName)} key={scaleName} value={scaleName}>{scaleTitles[scaleName]}</DropdownMenuRadioItem>
-                )
-              })}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  )
-}
-
-const Slider2 = ({ onChange, value }: { onChange: (value: Point2) => void, value: Point2 }) => {
-  const { state, state: { isChangingRef }, setState } = useSynth()
-  const width = 100
-  const height = 100
-  const defaultX = 50
-  const defaultY = 50
-  // const valRef = useRef<Point2 | null>(null)
-  // const [val, setVal] = useState<{ x: number, y: number }>({ x: defaultX, y: defaultY })
-  const svgRef = useRef<SVGSVGElement | null>(null)
-  const ellipseRef = useRef<SVGEllipseElement | null>(null)
-
-  useEffect(() => {
-    if (!ellipseRef.current) return;
-    const loc = { x: value.x * width, y: value.y * height }
-    const elem: SVGElement = ellipseRef.current
-    elem.setAttribute("cx", loc.x.toFixed(1))
-    elem.setAttribute("cy", loc.y.toFixed(1))
-    // setVal(value)
-  }, [value])
-
-  const onMouseDown = (ev: any) => {
-    if (!isChangingRef) return
-    ev.preventDefault()
-    isChangingRef.current = true
-  }
-  const onMouseMove = (ev: any) => {
-    if (!svgRef.current) return;
-    if (!ellipseRef.current) return;
-    if (!isChangingRef) return;
-    if (!isChangingRef.current) return;
-    ev.preventDefault()
-    const pt = svgRef.current.createSVGPoint();
-    pt.x = 'clientX' in ev ? ev.clientX : ev.touches[0].clientX
-    pt.y = 'clientY' in ev ? ev.clientY : ev.touches[0].clientY
-    const loc = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
-    const elem: SVGElement = ellipseRef.current
-    const x = Math.max(Math.min(loc.x, width), 0.0)
-    const y = Math.max(Math.min(loc.y, height), 0.0)
-    elem.setAttribute("cx", x.toFixed(1))
-    elem.setAttribute("cy", y.toFixed(1))
-    const newValue = { x, y }
-    onChange(newValue)
-  }
-  useEffect(() => {
-    const onMouseUp = (ev: any): any => {
-      if (!isChangingRef) return
-      ev.preventDefault()
-      isChangingRef.current = false
-    }
-    svgRef.current?.addEventListener('mousedown', onMouseDown, { passive: false })
-    svgRef.current?.addEventListener('mousemove', onMouseMove, { passive: false })
-    document.body.addEventListener('mouseup', onMouseUp, { passive: false })
-    svgRef.current?.addEventListener('touchstart', onMouseDown, { passive: false })
-    svgRef.current?.addEventListener('touchmove', onMouseMove, { passive: false })
-    svgRef.current?.addEventListener('touchend', onMouseUp, { passive: false })
-    return () => {
-      svgRef.current?.removeEventListener('mousedown', onMouseDown)
-      svgRef.current?.removeEventListener('mousemove', onMouseMove)
-      document.body.removeEventListener('mouseup', onMouseUp)
-      svgRef.current?.removeEventListener('touchstart', onMouseDown)
-      svgRef.current?.removeEventListener('touchmove', onMouseMove)
-      svgRef.current?.removeEventListener('touchend', onMouseUp)
-    }
-  }, [])
-
-  return (
-    <div className="w-full aspect-square bg-secondary mt-4 mb-4 p-4">
-      <svg ref={svgRef} className="w-full h-full cursor-pointer overflow-hidden" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
-        <ellipse ref={ellipseRef} stroke="currentColor" fill="none" strokeWidth="1" cx={defaultX} cy={defaultY} rx="4" ry="4" />
-      </svg>
-    </div>
   )
 }
 

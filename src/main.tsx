@@ -7,7 +7,7 @@ import {
 import { ThemeProvider } from "@/components/theme-provider"
 import Home from './Home'
 import './globals.css'
-import { SynthProvider } from '@/state/useSynth';
+import { SynthProvider } from 'src/state/use-synth';
 
 const basename = import.meta.env.VITE_BASE_ROUTE ?? '/chiaro-mini/'
 const router = createBrowserRouter([
@@ -18,7 +18,6 @@ const router = createBrowserRouter([
 ], {
   basename
 });
-
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -31,4 +30,3 @@ createRoot(document.getElementById('root')).render(
     </ThemeProvider>
   </StrictMode>
 );
-
