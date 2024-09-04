@@ -68,10 +68,12 @@ export const Slider2 = ({ onChange, value }: { onChange: (value: Point2) => void
   }, [])
 
   return (
-    <div className="w-full aspect-square bg-secondary mt-4 mb-4 p-4">
-      <svg ref={svgRef} className="w-full h-full cursor-pointer overflow-hidden" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
-        <ellipse ref={ellipseRef} stroke="currentColor" fill="none" strokeWidth="1" cx={defaultX} cy={defaultY} rx="4" ry="4" />
-      </svg>
+    <div className="w-full mt-4 mb-4 p-4 md:p-0">
+      <div className="w-full aspect-square bg-secondary p-4">
+        <svg ref={svgRef} className="w-full h-full cursor-pointer overflow-hidden" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
+          <ellipse ref={ellipseRef} stroke="currentColor" fill="none" strokeWidth="1" cx={defaultX} cy={defaultY} rx="4" ry="4" />
+        </svg>
+      </div>
     </div>
   )
 }

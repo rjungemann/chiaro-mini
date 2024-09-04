@@ -238,46 +238,46 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
     <>
       <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
         <div className="text-red-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Oscillator I</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Oscillator I</h3>
           <Param device={device} param={device.parameters.find((param) => `synth/harm-1` === param.id)} />
           <Param device={device} param={device.parameters.find((param) => `synth/gain-1` === param.id)} />
         </div>
 
         <div className="text-orange-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Oscillator II</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Oscillator II</h3>
           <Param device={device} param={device.parameters.find((param) => `synth/harm-2` === param.id)} />
           <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} />
           <Param device={device} param={device.parameters.find((param) => `synth/coarse-2` === param.id)} />
         </div>
 
         <div className="text-amber-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Oscillator III</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Oscillator III</h3>
           <Param device={device} param={device.parameters.find((param) => `synth/harm-3` === param.id)} />
           <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} />
           <Param device={device} param={device.parameters.find((param) => `synth/coarse-3` === param.id)} />
         </div>
 
         <div>
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Global</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Global</h3>
           <Param device={device} param={device.parameters.find((param) => `effect-drywet` === param.id)} />
         </div>
       </div>
 
       <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
         <div className="text-red-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Shaper I</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Shaper I</h3>
           <Slider2 value={osc1Loc} onChange={onSlider2ChangeFn(1)} />
           <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-1` === param.id)} />
         </div>
 
         <div className="text-orange-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Shaper II</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Shaper II</h3>
           <Slider2 value={osc2Loc} onChange={onSlider2ChangeFn(2)} />
           <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} />
         </div>
 
         <div className="text-amber-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Shaper III</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Shaper III</h3>
           <Slider2 value={osc3Loc} onChange={onSlider2ChangeFn(3)} />
           <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
         </div>
@@ -285,7 +285,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
         <div>
           {isShowingAdditionalParameters && (
             <>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Intonation</h3>
+              <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Intonation</h3>
               <Param device={device} param={device.parameters.find((param) => `synth/slop-amt` === param.id)} />
               <Param device={device} param={device.parameters.find((param) => `synth/vibrato-amt` === param.id)} />
               <Param device={device} param={device.parameters.find((param) => `synth/vibrato-freq` === param.id)} />
@@ -297,7 +297,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
 
       <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
         <div className="text-red-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Envelope I</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Envelope I</h3>
           <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} orientation="vertical" />
@@ -308,7 +308,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
         </div>
 
         <div className="text-orange-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Envelope II</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Envelope II</h3>
           <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} orientation="vertical" />
@@ -319,7 +319,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
         </div>
 
         <div className="text-amber-500">
-          <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Envelope III</h3>
+          <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Envelope III</h3>
           <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} orientation="vertical" />
@@ -337,7 +337,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
         <div>
           {isShowingAdditionalParameters && (
             <>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Chorus</h3>
+              <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Chorus</h3>
               <Param device={device} param={device.parameters.find((param) => `chorus/depth` === param.id)} />
               <Param device={device} param={device.parameters.find((param) => `chorus/rate` === param.id)} />
               <Param device={device} param={device.parameters.find((param) => `chorus/spread` === param.id)} />
@@ -348,7 +348,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
         <div>
           {isShowingAdditionalParameters && (
             <>
-              <h3 className="text-l font-semibold leading-none tracking-tight pb-2">Reverb</h3>
+              <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Reverb</h3>
               <Param device={device} param={device.parameters.find((param) => `reverb/damp` === param.id)} />
               <Param device={device} param={device.parameters.find((param) => `reverb/decay` === param.id)} />
               <Param device={device} param={device.parameters.find((param) => `reverb/diff` === param.id)} />
@@ -388,7 +388,8 @@ function Home() {
   const exportPatchClicked = () => {
     if (!device) return
     device.getPreset()
-    .then((preset) => {
+    // TODO: Get rid of `any`
+    .then((preset: any) => {
       setPatch(preset)
     })
   }
