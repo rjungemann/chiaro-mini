@@ -31,6 +31,7 @@ const defaultSynthState = {
   midi: null,
   inports: {},
   inport: null,
+  presets: [],
 }
 
 const defaultSynthContextState = {

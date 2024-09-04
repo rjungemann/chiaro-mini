@@ -457,7 +457,7 @@ function Home() {
     <div className="relative w-full h-full">
       <div className="absolute w-full h-full">
         <main className="p-4">
-          <div className="flex justify-between items-baseline">
+          <div className="flex justify-between items-baseline pb-4">
             <h1 className="bebas-neue text-4xl leading-none pb-2">
               <span className="text-red-500">Chiaro</span>
               {' '}
@@ -469,60 +469,60 @@ function Home() {
           </div>
           
           <div className="pb-4">
-            <div className="flex justify-between items-baseline">
-              <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
-
-              {state.midi && (
-                <div className="flex gap-2 items-baseline">
-                  <span className="font-semibold tracking-tight">MIDI In</span>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline">{state.inport && state.inports[state.inport]?.name}</Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuRadioGroup value={state.inport || undefined}>
-                        {Object.values(state.inports).map((port: MIDIInput) => {
-                          return (
-                            <DropdownMenuRadioItem onSelect={onInputChangeFn(port.id)} key={port.id} value={port.id}>{port.name}</DropdownMenuRadioItem>
-                          )
-                        })}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              )}
+            <div className="pb-2">
+              <h2 className="text-2xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
             </div>
-            
-            <Keyboard device={device} />
-          </div>
 
-          <div className="pb-4">
-            <div className="flex justify-between items-baseline">
-              <h2 className="text-xl font-semibold leading-none tracking-tight pb-4">Parameters</h2>
+            {state.midi && (
+              <div className="flex gap-2 justify-end items-baseline">
+                <span className="font-semibold tracking-tight">MIDI In</span>
 
-              <div className="flex gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="secondary">Presets</Button>
+                    <Button variant="outline">{state.inport && state.inports[state.inport]?.name}</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuRadioGroup value={state.inport || undefined}>
-                      {state.presets.map((preset: SynthPreset) => {
+                      {Object.values(state.inports).map((port: MIDIInput) => {
                         return (
-                          <DropdownMenuRadioItem onSelect={onPresetChangeFn(preset.name)} key={preset.name} value={preset.name}>{preset.name}</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem onSelect={onInputChangeFn(port.id)} key={port.id} value={port.id}>{port.name}</DropdownMenuRadioItem>
                         )
                       })}
                     </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button variant="secondary" title="Show Additional Parameters" onClick={showAdditionalParametersClicked}>
-                  {isShowingAdditionalParameters ? <EyeOpenIcon /> : <EyeClosedIcon />}
-                </Button>
-                <Button variant="secondary" title="Randomize" onClick={randomizeClicked}><CubeIcon /></Button>
-                <Button variant="outline" title="Import Patch" onClick={importPatchClicked}><UploadIcon /></Button>
-                <Button variant="outline" title="Export Patch" onClick={exportPatchClicked}><DownloadIcon /></Button>
               </div>
+            )}
+            
+            <Keyboard device={device} />
+          </div>
+
+          <div className="pb-4">
+            <div className="pb-2">
+              <h2 className="text-2xl font-semibold leading-none tracking-tight pb-4">Parameters</h2>
+            </div>
+
+            <div className="flex gap-2 pb-4 justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary">Presets</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuRadioGroup value={state.inport || undefined}>
+                    {state.presets.map((preset: SynthPreset) => {
+                      return (
+                        <DropdownMenuRadioItem onSelect={onPresetChangeFn(preset.name)} key={preset.name} value={preset.name}>{preset.name}</DropdownMenuRadioItem>
+                      )
+                    })}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="secondary" title="Show Additional Parameters" onClick={showAdditionalParametersClicked}>
+                {isShowingAdditionalParameters ? <EyeOpenIcon /> : <EyeClosedIcon />}
+              </Button>
+              <Button variant="secondary" title="Randomize" onClick={randomizeClicked}><CubeIcon /></Button>
+              <Button variant="outline" title="Import Patch" onClick={importPatchClicked}><UploadIcon /></Button>
+              <Button variant="outline" title="Export Patch" onClick={exportPatchClicked}><DownloadIcon /></Button>
             </div>
 
             <Params isShowingAdditionalParameters={isShowingAdditionalParameters} setIsShowingAdditionalParameters={setIsShowingAdditionalParameters} />
