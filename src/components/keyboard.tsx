@@ -38,6 +38,7 @@ export const Keyboard = ({ device }: { device: Device }) => {
   let heldNotes = useRef<number[]>([])
   const [currentKey, setCurrentKey] = useState<string>('C')
   const [currentScale, setCurrentScale] = useState<string>('major')
+  const [currentOctave, setCurrentOctave] = useState<number>(0)
 
   let channel = 0;
   let port = 0;
@@ -76,7 +77,7 @@ export const Keyboard = ({ device }: { device: Device }) => {
     if (!scaleIndices) throw new Error(`Could not find scale ${currentScale}`)
     const scaleOffset = scaleIndices[scaleIndex]
     if (scaleOffset === undefined) throw new Error('Could not find scale offset')
-    const value: number = baseNote + keyOffset + scaleOffset
+    const value: number = baseNote + keyOffset + scaleOffset + (currentOctave * 12)
     return [n, value]
   })
   const index8Notes = indices8.map((n, i) => {
@@ -88,7 +89,7 @@ export const Keyboard = ({ device }: { device: Device }) => {
     if (!scaleIndices) throw new Error(`Could not find scale ${currentScale}`)
     const scaleOffset = scaleIndices[scaleIndex]
     if (scaleOffset === undefined) throw new Error('Could not find scale offset')
-    const value: number = baseNote + keyOffset + scaleOffset
+    const value: number = baseNote + keyOffset + scaleOffset + (currentOctave * 12)
     return [n, value]
   })
 
@@ -97,6 +98,9 @@ export const Keyboard = ({ device }: { device: Device }) => {
   }
   const onScaleChangeFn = (scaleName: string) => () => {
     setCurrentScale(scaleName)
+  }
+  const onOctaveChangeFn = (octave: number) => () => {
+    setCurrentOctave(octave)
   }
 
   return (
@@ -145,7 +149,24 @@ export const Keyboard = ({ device }: { device: Device }) => {
               {Object.keys(scaleMap).map((scaleName: string) => {
                 const scaleValue = scaleMap[scaleName]
                 return (
-                  <DropdownMenuRadioItem  onSelect={onScaleChangeFn(scaleName)} key={scaleName} value={scaleName}>{scaleTitles[scaleName]}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem onSelect={onScaleChangeFn(scaleName)} key={scaleName} value={scaleName}>{scaleTitles[scaleName]}</DropdownMenuRadioItem>
+                )
+              })}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <span className="font-semibold tracking-tight">Octave</span>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">{currentOctave >= 0 ? `+${currentOctave}` : currentOctave}</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuRadioGroup value={undefined}>
+              {[-2, -1, 0, 1, 2].map((octave: number) => {
+                return (
+                  <DropdownMenuRadioItem onSelect={onOctaveChangeFn(octave)} key={octave} value={octave}>{octave >= 0 ? `+${octave}` : octave}</DropdownMenuRadioItem>
                 )
               })}
             </DropdownMenuRadioGroup>

@@ -1,7 +1,7 @@
 import { createContext, MutableRefObject, ReactNode, useContext, useEffect, useRef, useState } from 'react'
 import { createDevice, Device, MIDIByte, MIDIData, MIDIEvent, TimeNow } from '@rnbo/js';
 
-type SynthState = {
+export type SynthState = {
   context: AudioContext | null
   device: Device | null
   startDevice: () => void
@@ -9,6 +9,12 @@ type SynthState = {
   midi: MIDIAccess | null
   inports: Record<string, MIDIInput>
   inport: string | null
+  presets: SynthPreset[]
+}
+
+export type SynthPreset = {
+  name: string
+  preset: any
 }
 
 type SynthContextState = {
@@ -64,7 +70,7 @@ const startAudio = async (context: AudioContext) => {
   }
   // Connect the device to the output
   device.node.connect(outputNode);
-  return device
+  return { patcher, deps, device }
 }
 
 const SynthContext = createContext<SynthContextState>(defaultSynthContextState)
@@ -148,11 +154,12 @@ export const SynthProvider = ({ children }: { children: ReactNode }) => {
     
     const startDevice = async () => {
       const context = new AudioContext();
-      const device = await startAudio(context)
+      const { patcher, deps, device } = await startAudio(context)
       setState({
         ...state,
         context,
         device,
+        presets: patcher.presets,
       })
     }
     setState({
