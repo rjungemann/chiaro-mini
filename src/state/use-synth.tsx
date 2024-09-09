@@ -1,6 +1,8 @@
 import { createContext, MutableRefObject, ReactNode, useContext, useEffect, useRef, useState } from 'react'
 import { createDevice, Device, MIDIByte, MIDIData, MIDIEvent, TimeNow } from '@rnbo/js';
 
+const defaultGain = 0.25;
+
 export type SynthState = {
   context: AudioContext | null
   device: Device | null
@@ -60,6 +62,7 @@ const startAudio = async (context: AudioContext) => {
   context.resume()
   // Create gain node and connect it to audio output
   const outputNode = context.createGain();
+  outputNode.gain.value = defaultGain;
   outputNode.connect(context.destination);
   // Create the device
   const patcher = await fetchPatcher()
@@ -131,27 +134,6 @@ export const SynthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [state])
 
-  // useEffect(() => {
-  //   // TODO: Remove `any`
-  //   const onVisibilityChange = async (event: any) => {
-  //     if (!state) return
-  //     if (!state.context) return
-  //     const isVisible = document.visibilityState === "visible"
-  //     console.log("isVisible", isVisible)
-  //     if (isVisible) {
-  //       await state.context?.suspend()
-  //     } else {
-  //       await state.context?.resume()
-  //     }
-  //   }
-  //   document.addEventListener("visibilitychange", onVisibilityChange)
-  //   return () => {
-  //     if (!state) return
-  //     if (!state.context) return
-  //     document.removeEventListener("visibilitychange", onVisibilityChange)
-  //   }
-  // })
-
   useEffect(() => {
     if (!state) return
     if (!state.inport) return
@@ -183,6 +165,9 @@ export const SynthProvider = ({ children }: { children: ReactNode }) => {
         device,
         presets: patcher.presets,
       })
+
+      console.info('Loading the initial preset')
+      device.setPreset(patcher.presets[0].preset)
     }
     setState({
       ...state,

@@ -14,8 +14,10 @@ import { DeviceParam, Point2 } from '@/types';
 import { CubeIcon } from '@/components/cube-icon';
 import { UploadIcon } from '@/components/upload-icon';
 import { DownloadIcon } from '@/components/download-icon';
-import { EyeClosedIcon } from './components/eye-closed-icon';
-import { EyeOpenIcon } from './components/eye-open-icon';
+import { EyeClosedIcon } from '@/components/eye-closed-icon';
+import { EyeOpenIcon } from '@/components/eye-open-icon';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Link } from 'react-router-dom';
 
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
@@ -76,13 +78,6 @@ const paramNames: Record<string, string> = {
   'chorus/depth': 'Depth',
   'chorus/rate': 'Rate',
   'chorus/spread': 'Spread',
-
-  'reverb/damp': 'Damp',
-  'reverb/decay': 'Decay',
-  'reverb/diff': 'Diff',
-  'reverb/jitter': 'Jitter',
-  'reverb/mix': 'Mix',
-  'reverb/size': 'Size',
 }
 
 const scale = (x: number, min: number, max: number, a: number, b: number): number => (
@@ -103,7 +98,7 @@ const randomizeParams = ({ device }: { device: Device }) => {
     if (param.id.match(/^synth\/slop-/)) return;
     if (param.id.match(/^synth\/coarse-/)) return;
     if (param.id.match(/^chorus\//)) return;
-    if (param.id.match(/^reverb\//)) return;
+    if (param.id.match(/^delay\//)) return;
     // Shaper settings
     if (param.id.match(/^synth\/shaper-[xy]-/)) {
       param.value = Math.floor(Math.random() * 2.0);
@@ -330,11 +325,6 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
         </div>
 
         <div>
-        </div>
-      </div>
-
-      <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
-        <div>
           {isShowingAdditionalParameters && (
             <>
               <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Chorus</h3>
@@ -343,26 +333,6 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
               <Param device={device} param={device.parameters.find((param) => `chorus/spread` === param.id)} />
             </>
           )}
-        </div>
-
-        <div>
-          {isShowingAdditionalParameters && (
-            <>
-              <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Reverb</h3>
-              <Param device={device} param={device.parameters.find((param) => `reverb/damp` === param.id)} />
-              <Param device={device} param={device.parameters.find((param) => `reverb/decay` === param.id)} />
-              <Param device={device} param={device.parameters.find((param) => `reverb/diff` === param.id)} />
-              <Param device={device} param={device.parameters.find((param) => `reverb/jitter` === param.id)} />
-              <Param device={device} param={device.parameters.find((param) => `reverb/mix` === param.id)} />
-              <Param device={device} param={device.parameters.find((param) => `reverb/size` === param.id)} />
-            </>
-          )}
-        </div>
-
-        <div>
-        </div>
-
-        <div>
         </div>
       </div>
     </>
@@ -416,6 +386,21 @@ function Home() {
     setPatchToImport(null)
   }
 
+  const onInputChangeFn = (id: string) => () => {
+    console.log('Input changed', id)
+    setState({ ...state, inport: id })
+  }
+
+  const showAdditionalParametersClicked = () => {
+    setIsShowingAdditionalParameters((value) => !value)
+  }
+
+  const onPresetChangeFn = (name: string) => () => {
+    const preset = state.presets.find((preset) => preset.name === name)
+    if (!preset) throw new Error('Could not find preset')
+    device.setPreset(preset.preset)
+  }
+
   if (!device) {
     return (
       <main className="flex items-center justify-center w-full h-full bg-secondary">
@@ -439,26 +424,11 @@ function Home() {
     )
   }
 
-  const onInputChangeFn = (id: string) => () => {
-    console.log('Input changed', id)
-    setState({ ...state, inport: id })
-  }
-
-  const showAdditionalParametersClicked = () => {
-    setIsShowingAdditionalParameters((value) => !value)
-  }
-
-  const onPresetChangeFn = (name: string) => () => {
-    const preset = state.presets.find((preset) => preset.name === name)
-    if (!preset) throw new Error('Could not find preset')
-    device.setPreset(preset.preset)
-  }
-
   return (
     <div className="relative w-full h-full">
       <div className="absolute w-full h-full">
-        <main className="p-4">
-          <div className="flex justify-between items-baseline pb-4">
+        <main className="p-4 flex flex-col gap-8">
+          <div className="flex justify-between items-baseline">
             <h1 className="bebas-neue text-4xl leading-none pb-2">
               <span className="text-red-500">Chiaro</span>
               {' '}
@@ -468,8 +438,23 @@ function Home() {
             </h1>
             <ModeToggle />
           </div>
+
+          <div className="mb-4">
+            <Alert>
+              <AlertTitle className="text-xl text-red-500 font-semibold leading-none tracking-tight pb-2">
+                What is Chiaro Mini?
+              </AlertTitle>
+              <AlertDescription>
+                <div className="flex flex-col gap-2">
+                  <p>Chiaro Mini is a specially-designed vocal synth. Instead of using filters to subtract sound, Chiaro Mini builds up sounds from harmonics.</p>
+                  <p>Try playing with the presets, or click the "Dice" icon to randomize the sound. Then try clicking around on the keyboard.</p>
+                  <p>Read more about Chiaro Mini over at <a className="text-orange-500 opacity-80 hover:opacity-100" href="https://phasor.space/Articles/Resources/Chiaro+Mini%2C+A+Vocal+Synth+in+the+Browser">Phasor Space</a>.</p>
+                </div>
+              </AlertDescription>
+            </Alert>
+          </div>
           
-          <div className="pb-4">
+          <div>
             <div className="pb-2">
               <h2 className="text-2xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
             </div>

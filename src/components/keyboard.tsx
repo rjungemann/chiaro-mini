@@ -107,7 +107,7 @@ export const Keyboard = ({ device }: { device: Device }) => {
     <div className="pt-4 pb-4">
       <div className="grid flex-1 items-start gap-4 grid-cols-4 md:hidden pb-4">
         {index4Notes.map(([index, note]) => (
-          <Button className="h-36 text-stone-500 text-xl" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
+          <Button className="h-24 text-stone-500 text-xl" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
             {noteNames[note % 12]}{Math.floor(note / 12)}
           </Button>
         ))}
@@ -115,13 +115,13 @@ export const Keyboard = ({ device }: { device: Device }) => {
 
       <div className="grid flex-1 items-start gap-4 grid-cols-8 hidden md:grid pb-4">
         {index8Notes.map(([index, note]) => (
-          <Button className="h-36 text-stone-500 text-xl" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
+          <Button className="h-24 text-stone-500 text-xl" key={index} variant="secondary" onPointerDown={onMouseDownFn(index, note)}>
             {noteNames[note % 12]}{Math.floor(note / 12)}
           </Button>
         ))}
       </div>
 
-      <div className="flex gap-2 items-baseline">
+      <div className="flex gap-2 items-baseline justify-end">
         <span className="font-semibold tracking-tight">Key</span>
 
         <DropdownMenu>
