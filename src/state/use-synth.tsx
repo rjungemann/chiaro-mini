@@ -129,7 +129,28 @@ export const SynthProvider = ({ children }: { children: ReactNode }) => {
       if (!state.midi) return
       state.midi.removeEventListener("statechange", callback)
     }
-  }, [state.midi])
+  }, [state])
+
+  // useEffect(() => {
+  //   // TODO: Remove `any`
+  //   const onVisibilityChange = async (event: any) => {
+  //     if (!state) return
+  //     if (!state.context) return
+  //     const isVisible = document.visibilityState === "visible"
+  //     console.log("isVisible", isVisible)
+  //     if (isVisible) {
+  //       await state.context?.suspend()
+  //     } else {
+  //       await state.context?.resume()
+  //     }
+  //   }
+  //   document.addEventListener("visibilitychange", onVisibilityChange)
+  //   return () => {
+  //     if (!state) return
+  //     if (!state.context) return
+  //     document.removeEventListener("visibilitychange", onVisibilityChange)
+  //   }
+  // })
 
   useEffect(() => {
     if (!state) return
@@ -148,7 +169,7 @@ export const SynthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       inport.removeEventListener("midimessage", callback)
     }
-  }, [state.inport])
+  }, [state])
 
   useEffect(() => {
     if (state.context && state.device) return;
