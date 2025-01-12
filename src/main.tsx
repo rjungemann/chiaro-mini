@@ -18,8 +18,8 @@ const router = createBrowserRouter([
 ], {
   basename
 });
-
-createRoot(document.getElementById('root')).render(
+const root = document.getElementById('root')!
+const app = (
   <StrictMode>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
@@ -29,4 +29,5 @@ createRoot(document.getElementById('root')).render(
       </SynthProvider>
     </ThemeProvider>
   </StrictMode>
-);
+)
+createRoot(root).render(app);

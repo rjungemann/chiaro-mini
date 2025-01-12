@@ -18,6 +18,7 @@ import { EyeClosedIcon } from '@/components/eye-closed-icon';
 import { EyeOpenIcon } from '@/components/eye-open-icon';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'react-router-dom';
+import { Adsr } from './components/adsr';
 
 // // TODO: Presets
 // // https://gist.github.com/rjungemann/add040e2062218bb6e5e2a587907ffa1
@@ -135,14 +136,10 @@ const randomizeParams = ({ device }: { device: Device }) => {
   })
 }
 
+// TODO: Units for label
 const Param = ({ device, param, orientation = "horizontal" }: { device: Device, param: DeviceParam, orientation?: "horizontal" | "vertical" }) => {
   const [value, setValue] = useState<number>(param.initialValue)
   const onSliderChange = ([value]: [number]) => {
-    setValue(value)
-    param.value = value
-  }
-  const onTextChange = (ev: ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(ev.target.value)
     setValue(value)
     param.value = value
   }
@@ -166,6 +163,7 @@ const Param = ({ device, param, orientation = "horizontal" }: { device: Device, 
     }
   }, [])
 
+  const displayValue = value.toFixed(1)
   const name = paramNames[param.id]
   if (!name) {
     throw new Error(`Could not find a name for param with id ${param.id}`)
@@ -176,14 +174,16 @@ const Param = ({ device, param, orientation = "horizontal" }: { device: Device, 
       <div className="grid flex-1 gap-2 pt-1 pb-1 grid-cols-3 w-full items-center">
         <label className="param-label" htmlFor={param.name}>{name}</label>
         <Slider className="param-slider" id={param.id} value={[value]} orientation={orientation} onValueChange={onSliderChange} step={steps} min={param.min} max={param.max} />
-        <Input value={value} onChange={onTextChange}></Input>
+        <span>{displayValue}</span>
+        {/* <Input value={value} onChange={onTextChange}></Input> */}
       </div>
     )
     : (
       <div className="grid flex-1 gap-2 pt-1 pb-1 grid-rows-3 h-full items-center justify-items-center">
         <label className="param-label" htmlFor={param.name}>{name}</label>
         <VerticalSlider className="param-slider h-full" id={param.id} value={[value]} onValueChange={onSliderChange} step={steps} min={param.min} max={param.max} />
-        <Input className="text-center" value={value} onChange={onTextChange}></Input>
+        <span>{displayValue}</span>
+        {/* <Input className="text-center" value={value} onChange={onTextChange}></Input> */}
       </div>
     )
   )
@@ -196,20 +196,44 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
   const [osc1Loc, setOsc1Loc] = useState<Point2>({ x: 0, y: 0 })
   const [osc2Loc, setOsc2Loc] = useState<Point2>({ x: 0, y: 0 })
   const [osc3Loc, setOsc3Loc] = useState<Point2>({ x: 0, y: 0 })
+  const [adsr1Attack, setAdsr1Attack] = useState<number>(5.0)
+  const [adsr1Decay, setAdsr1Decay] = useState<number>(150.0)
+  const [adsr1Sustain, setAdsr1Sustain] = useState<number>(0.5)
+  const [adsr1Release, setAdsr1Release] = useState<number>(250.0)
+  const [adsr2Attack, setAdsr2Attack] = useState<number>(5.0)
+  const [adsr2Decay, setAdsr2Decay] = useState<number>(150.0)
+  const [adsr2Sustain, setAdsr2Sustain] = useState<number>(0.5)
+  const [adsr2Release, setAdsr2Release] = useState<number>(250.0)
+  const [adsr3Attack, setAdsr3Attack] = useState<number>(5.0)
+  const [adsr3Decay, setAdsr3Decay] = useState<number>(150.0)
+  const [adsr3Sustain, setAdsr3Sustain] = useState<number>(0.5)
+  const [adsr3Release, setAdsr3Release] = useState<number>(250.0)
 
   // Listen for updates from device
   useEffect(() => {
     if (!device) return
-    // TODO: Remove any
-    const callback = (updatedParam: any) => {
+    const callback = (updatedParam: { id: string, value: number }) => {
       if (!isChangingRef) return
       if (isChangingRef.current) return
+      console.log('updatedParam', updatedParam)
       if (updatedParam.id === 'synth/shaper-x-1') setOsc1Loc({ ...osc1Loc, x: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-y-1') setOsc1Loc({ ...osc1Loc, y: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-x-2') setOsc2Loc({ ...osc2Loc, x: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-y-2') setOsc2Loc({ ...osc2Loc, y: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-x-3') setOsc3Loc({ ...osc3Loc, x: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-y-3') setOsc3Loc({ ...osc3Loc, y: updatedParam.value })
+      if (updatedParam.id === 'synth/a-1') setAdsr1Attack(updatedParam.value)
+      if (updatedParam.id === 'synth/d-1') setAdsr1Decay(updatedParam.value)
+      if (updatedParam.id === 'synth/s-1') setAdsr1Sustain(updatedParam.value)
+      if (updatedParam.id === 'synth/r-1') setAdsr1Release(updatedParam.value)
+      if (updatedParam.id === 'synth/a-2') setAdsr2Attack(updatedParam.value)
+      if (updatedParam.id === 'synth/d-2') setAdsr2Decay(updatedParam.value)
+      if (updatedParam.id === 'synth/s-2') setAdsr2Sustain(updatedParam.value)
+      if (updatedParam.id === 'synth/r-2') setAdsr2Release(updatedParam.value)
+      if (updatedParam.id === 'synth/a-3') setAdsr3Attack(updatedParam.value)
+      if (updatedParam.id === 'synth/d-3') setAdsr3Decay(updatedParam.value)
+      if (updatedParam.id === 'synth/s-3') setAdsr3Sustain(updatedParam.value)
+      if (updatedParam.id === 'synth/r-3') setAdsr3Release(updatedParam.value)
     }
     device.parameterChangeEvent.subscribe(callback)
     return () => {
@@ -252,7 +276,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
           <Param device={device} param={device.parameters.find((param) => `synth/coarse-3` === param.id)} />
         </div>
 
-        <div>
+        <div className="text-stone-400">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Global</h3>
           <Param device={device} param={device.parameters.find((param) => `effect-drywet` === param.id)} />
         </div>
@@ -277,7 +301,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
           <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
         </div>
 
-        <div>
+        <div className="text-stone-400">
           {isShowingAdditionalParameters && (
             <>
               <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Intonation</h3>
@@ -293,6 +317,9 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
       <div className="grid flex-1 items-start gap-8 pt-4 pb-4 grid-cols-1 md:grid-cols-4">
         <div className="text-red-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Envelope I</h3>
+          <div className="flex flex-cols gap-2">
+            <Adsr attack={adsr1Attack} decay={adsr1Decay} sustain={adsr1Sustain} release={adsr1Release} />
+          </div>
           <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} orientation="vertical" />
@@ -304,6 +331,9 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
 
         <div className="text-orange-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Envelope II</h3>
+          <div className="flex flex-cols gap-2">
+            <Adsr attack={adsr2Attack} decay={adsr2Decay} sustain={adsr2Sustain} release={adsr2Release} />
+          </div>
           <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} orientation="vertical" />
@@ -315,6 +345,9 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
 
         <div className="text-amber-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Envelope III</h3>
+          <div className="flex flex-cols gap-2">
+            <Adsr attack={adsr3Attack} decay={adsr3Decay} sustain={adsr3Sustain} release={adsr3Release} />
+          </div>
           <div className="flex flex-cols gap-2 h-60">
             <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} orientation="vertical" />
             <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} orientation="vertical" />
@@ -324,7 +357,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
           {isShowingAdditionalParameters && <Param device={device} param={device.parameters.find((param) => `synth/vel-amt-3` === param.id)} />}
         </div>
 
-        <div>
+        <div className="text-stone-400">
           {isShowingAdditionalParameters && (
             <>
               <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Chorus</h3>
@@ -398,6 +431,7 @@ function Home() {
   const onPresetChangeFn = (name: string) => () => {
     const preset = state.presets.find((preset) => preset.name === name)
     if (!preset) throw new Error('Could not find preset')
+    if (!device) throw new Error('Could not find device')
     device.setPreset(preset.preset)
   }
 
