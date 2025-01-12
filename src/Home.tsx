@@ -137,7 +137,7 @@ const randomizeParams = ({ device }: { device: Device }) => {
 }
 
 // TODO: Units for label
-const Param = ({ device, param, orientation = "horizontal" }: { device: Device, param: DeviceParam, orientation?: "horizontal" | "vertical" }) => {
+const Param = ({ device, param, unit = '', orientation = "horizontal" }: { device: Device, param: DeviceParam, unit?: string, orientation?: "horizontal" | "vertical" }) => {
   const [value, setValue] = useState<number>(param.initialValue)
   const onSliderChange = ([value]: [number]) => {
     setValue(value)
@@ -153,7 +153,7 @@ const Param = ({ device, param, orientation = "horizontal" }: { device: Device, 
   useEffect(() => {
     const callback = (updatedParam: DeviceParam) => {
       if (param.id === updatedParam.id) {
-        console.info('Received param update from device', param)
+        console.info('Received param update from device', updatedParam)
         setValue(updatedParam.value)
       }
     }
@@ -163,7 +163,15 @@ const Param = ({ device, param, orientation = "horizontal" }: { device: Device, 
     }
   }, [])
 
-  const displayValue = value.toFixed(1)
+  useEffect(() => {
+    console.info('Updating param from UI', param, value)
+    param.value = value
+  }, [value])
+
+  const displayValue = (unit === '%') ? (value * 100.0).toFixed(0)
+  : (unit == ' semis') ? value.toFixed(2)
+  : (unit == 'ms') ? value.toFixed(0)
+  : value.toFixed(1)
   const name = paramNames[param.id]
   if (!name) {
     throw new Error(`Could not find a name for param with id ${param.id}`)
@@ -171,19 +179,17 @@ const Param = ({ device, param, orientation = "horizontal" }: { device: Device, 
   return (
     orientation === 'horizontal'
     ? (
-      <div className="grid flex-1 gap-2 pt-1 pb-1 grid-cols-3 w-full items-center">
-        <label className="param-label" htmlFor={param.name}>{name}</label>
+      <div className="grid flex-1 gap-1 pt-1 pb-1 grid-cols-3 w-full items-center">
+        <label className="param-label cursor-pointer text-sm font-bold" htmlFor={param.name} onClick={() => setValue(param.initialValue)}>{name}</label>
         <Slider className="param-slider" id={param.id} value={[value]} orientation={orientation} onValueChange={onSliderChange} step={steps} min={param.min} max={param.max} />
-        <span>{displayValue}</span>
-        {/* <Input value={value} onChange={onTextChange}></Input> */}
+        <input className="bg-stone-800 p-1 cursor-pointer text-xs" value={`${displayValue}${unit}`} disabled={true} />
       </div>
     )
     : (
-      <div className="grid flex-1 gap-2 pt-1 pb-1 grid-rows-3 h-full items-center justify-items-center">
-        <label className="param-label" htmlFor={param.name}>{name}</label>
+      <div className="grid flex-1 gap-1 grid-rows-3 w-full h-full items-center justify-items-center">
+        <label className="param-label cursor-pointer text-sm font-bold" htmlFor={param.name} onClick={() => setValue(param.initialValue)}>{name}</label>
         <VerticalSlider className="param-slider h-full" id={param.id} value={[value]} onValueChange={onSliderChange} step={steps} min={param.min} max={param.max} />
-        <span>{displayValue}</span>
-        {/* <Input className="text-center" value={value} onChange={onTextChange}></Input> */}
+        <input className="bg-stone-800 p-1 cursor-pointer w-full text-ellipsis text-xs" value={`${displayValue}${unit}`} disabled={true} />
       </div>
     )
   )
@@ -247,6 +253,7 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
     const yparam = device.parameters.find((param) => param.id === `synth/shaper-y-${index}`)
     xparam.value = scale(point.x, 0.0, 1.0, xparam.min, xparam.max)
     yparam.value = scale(point.y, 0.0, 1.0, yparam.min, yparam.max)
+    // TODO
   }
 
   if (!device) {
@@ -259,26 +266,26 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
         <div className="text-red-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Oscillator I</h3>
           <Param device={device} param={device.parameters.find((param) => `synth/harm-1` === param.id)} />
-          <Param device={device} param={device.parameters.find((param) => `synth/gain-1` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/gain-1` === param.id)} unit="%" />
         </div>
 
         <div className="text-orange-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Oscillator II</h3>
           <Param device={device} param={device.parameters.find((param) => `synth/harm-2` === param.id)} />
-          <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} />
-          <Param device={device} param={device.parameters.find((param) => `synth/coarse-2` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/gain-2` === param.id)} unit="%" />
+          <Param device={device} param={device.parameters.find((param) => `synth/coarse-2` === param.id)} unit=" semis" />
         </div>
 
         <div className="text-amber-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Oscillator III</h3>
           <Param device={device} param={device.parameters.find((param) => `synth/harm-3` === param.id)} />
-          <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} />
-          <Param device={device} param={device.parameters.find((param) => `synth/coarse-3` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/gain-3` === param.id)} unit="%" />
+          <Param device={device} param={device.parameters.find((param) => `synth/coarse-3` === param.id)} unit=" semis" />
         </div>
 
         <div className="text-stone-400">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Global</h3>
-          <Param device={device} param={device.parameters.find((param) => `effect-drywet` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `effect-drywet` === param.id)} unit="%" />
         </div>
       </div>
 
@@ -286,19 +293,19 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
         <div className="text-red-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Shaper I</h3>
           <Slider2 value={osc1Loc} onChange={onSlider2ChangeFn(1)} />
-          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-1` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-1` === param.id)} unit="%" />
         </div>
 
         <div className="text-orange-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Shaper II</h3>
           <Slider2 value={osc2Loc} onChange={onSlider2ChangeFn(2)} />
-          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-2` === param.id)} unit="%" />
         </div>
 
         <div className="text-amber-500">
           <h3 className="text-xl font-semibold leading-none tracking-tight pb-2">Shaper III</h3>
           <Slider2 value={osc3Loc} onChange={onSlider2ChangeFn(3)} />
-          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} />
+          <Param device={device} param={device.parameters.find((param) => `synth/shaper-gain-3` === param.id)} unit="%" />
         </div>
 
         <div className="text-stone-400">
@@ -321,10 +328,10 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
             <Adsr attack={adsr1Attack} decay={adsr1Decay} sustain={adsr1Sustain} release={adsr1Release} />
           </div>
           <div className="flex flex-cols gap-2 h-60">
-            <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/s-1` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/r-1` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/a-1` === param.id)} unit="ms" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-1` === param.id)} unit="ms" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-1` === param.id)} unit="%" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-1` === param.id)} unit="ms" orientation="vertical" />
           </div>
           {isShowingAdditionalParameters && <Param device={device} param={device.parameters.find((param) => `synth/vel-amt-1` === param.id)} />}
         </div>
@@ -335,10 +342,10 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
             <Adsr attack={adsr2Attack} decay={adsr2Decay} sustain={adsr2Sustain} release={adsr2Release} />
           </div>
           <div className="flex flex-cols gap-2 h-60">
-            <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/r-2` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/a-2` === param.id)} unit="ms" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-2` === param.id)} unit="ms" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-2` === param.id)} unit="%" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-2` === param.id)} unit="ms" orientation="vertical" />
           </div>
           {isShowingAdditionalParameters && <Param device={device} param={device.parameters.find((param) => `synth/vel-amt-2` === param.id)} />}
         </div>
@@ -349,10 +356,10 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
             <Adsr attack={adsr3Attack} decay={adsr3Decay} sustain={adsr3Sustain} release={adsr3Release} />
           </div>
           <div className="flex flex-cols gap-2 h-60">
-            <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} orientation="vertical" />
-            <Param device={device} param={device.parameters.find((param) => `synth/r-3` === param.id)} orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/a-3` === param.id)} unit="ms" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/d-3` === param.id)} unit="ms" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/s-3` === param.id)} unit="%" orientation="vertical" />
+            <Param device={device} param={device.parameters.find((param) => `synth/r-3` === param.id)} unit="ms" orientation="vertical" />
           </div>
           {isShowingAdditionalParameters && <Param device={device} param={device.parameters.find((param) => `synth/vel-amt-3` === param.id)} />}
         </div>

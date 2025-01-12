@@ -26,8 +26,8 @@ export const Adsr = ({ attack, decay, sustain, release }: { attack: number, deca
   const releaseY = height
     
   return (
-    <div className="w-full mt-4 mb-0 p-4 md:p-0">
-      <div className="w-full bg-secondary p-4">
+    <div className="mt-4 mb-0 ml-6 mr-6">
+      <div className="bg-secondary p-4">
         <svg className="w-full cursor-pointer overflow-visible" xmlns="http://www.w3.org/2000/svg" viewBox={[0, 0, width, height].join(' ')}>
           <line stroke="currentColor" strokeWidth="1" x1={attackX} y1={attackY} x2={decayX} y2={decayY} />
           <line stroke="currentColor" strokeWidth="1" x1={decayX} y1={decayY} x2={sustainX1} y2={sustainY1} />
