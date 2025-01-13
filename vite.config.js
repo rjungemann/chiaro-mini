@@ -8,9 +8,8 @@ const __dirname = path.dirname(__filename);
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const base = mode === 'development' ? '/' : '/chiaro-mini/'
   return {
-    base,
+    base: '/chiaro-mini/',
     plugins: [react()],
     resolve: {
       alias: {

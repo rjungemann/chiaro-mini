@@ -43,13 +43,15 @@ const defaultSynthContextState = {
   setState: () => {}
 }
 
+const BASE_PATH = '/chiaro-mini'
+
 const fetchPatcher = () => (
-  fetch(`/export/patch.export.json`)
+  fetch(`${BASE_PATH}/export/patch.export.json`)
   .then((response) => response.json())
 );
 
 const fetchDeps = () => (
-  fetch(`/export/dependencies.json`)
+  fetch(`${BASE_PATH}/export/dependencies.json`)
   .then((response) => response.json())
   .then((deps) => (
     // TODO: Remove any
