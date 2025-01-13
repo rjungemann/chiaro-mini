@@ -7,6 +7,7 @@ export type SynthState = {
   context: AudioContext | null
   device: Device | null
   startDevice: () => void
+  analyser: AnalyserNode | null,
   isChangingRef: MutableRefObject<boolean> | null
   midi: MIDIAccess | null
   inports: Record<string, MIDIInput>
@@ -28,6 +29,7 @@ const defaultSynthState = {
   context: null,
   device: null,
   startDevice: () => { throw new Error('Not implemented') },
+  analyser: null,
   isChangingRef: null,
   setIsChanging: (value: boolean) => {},
   midi: null,
@@ -70,9 +72,14 @@ const startAudio = async (context: AudioContext) => {
   if (deps.length) {
     await device.loadDataBufferDependencies(deps);
   }
-  // Connect the device to the output
-  device.node.connect(outputNode);
-  return { patcher, deps, device }
+  // Create analyser for the oscilloscope
+  const analyser = context.createAnalyser();
+  analyser.fftSize = 2048;
+  // Connect the device to the analyser, and the analyser to the output
+  device.node.connect(analyser);
+  analyser.connect(outputNode);
+  // device.node.connect(outputNode);
+  return { patcher, deps, device, analyser }
 }
 
 const SynthContext = createContext<SynthContextState>(defaultSynthContextState)
@@ -156,11 +163,12 @@ export const SynthProvider = ({ children }: { children: ReactNode }) => {
     
     const startDevice = async () => {
       const context = new AudioContext();
-      const { patcher, deps, device } = await startAudio(context)
+      const { patcher, deps, device, analyser } = await startAudio(context)
       setState({
         ...state,
         context,
         device,
+        analyser,
         presets: patcher.presets,
       })
 

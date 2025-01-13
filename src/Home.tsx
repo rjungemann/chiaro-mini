@@ -153,7 +153,7 @@ const Param = ({ device, param, unit = '', orientation = "horizontal" }: { devic
   useEffect(() => {
     const callback = (updatedParam: DeviceParam) => {
       if (param.id === updatedParam.id) {
-        console.info('Received param update from device', updatedParam)
+        // console.info('Received param update from device', updatedParam)
         setValue(updatedParam.value)
       }
     }
@@ -164,7 +164,7 @@ const Param = ({ device, param, unit = '', orientation = "horizontal" }: { devic
   }, [])
 
   useEffect(() => {
-    console.info('Updating param from UI', param, value)
+    // console.info('Updating param from UI', param, value)
     param.value = value
   }, [value])
 
@@ -221,7 +221,6 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
     const callback = (updatedParam: { id: string, value: number }) => {
       if (!isChangingRef) return
       if (isChangingRef.current) return
-      console.log('updatedParam', updatedParam)
       if (updatedParam.id === 'synth/shaper-x-1') setOsc1Loc({ ...osc1Loc, x: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-y-1') setOsc1Loc({ ...osc1Loc, y: updatedParam.value })
       if (updatedParam.id === 'synth/shaper-x-2') setOsc2Loc({ ...osc2Loc, x: updatedParam.value })
@@ -379,8 +378,51 @@ const Params = ({ isShowingAdditionalParameters, setIsShowingAdditionalParameter
   )
 }
 
+const Oscilloscope = ({ analyser }: { analyser: AnalyserNode }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const raf = useRef<number>()
+
+  useEffect(() => {
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    // TODO: Find a 0-crossing and draw n samples from that point onward
+    // If not possible, use previous snapshot
+    const draw = () => {
+      raf.current = requestAnimationFrame(draw);
+      const canvas = canvasRef.current;
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')!
+      const [width, height] = [canvas.width, canvas.height]
+      analyser.getByteTimeDomainData(dataArray);
+      ctx.fillStyle = "rgb(41 37 36)";
+      ctx.fillRect(0, 0, width, height);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgb(249 115 22)";
+      ctx.beginPath();
+      const sliceWidth = width / bufferLength;
+      let x = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = v * (height / 2);
+        (i === 0) ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        x += sliceWidth;
+      }
+      ctx.lineTo(width, height / 2);
+      ctx.stroke();
+    }
+    raf.current = requestAnimationFrame(draw);
+    return () => {
+      if (raf.current) cancelAnimationFrame(raf.current)
+    }
+  }, [])
+
+  return (
+    <canvas ref={canvasRef} width="250px" height="250px"></canvas>
+  )
+}
+
 function Home() {
-  const { state, state: { device, startDevice }, setState } = useSynth()
+  const { state, state: { device, startDevice, analyser }, setState } = useSynth()
   const [isImportingPatch, setIsImportingPatch] = useState<boolean>(false)
   const [isShowingAdditionalParameters, setIsShowingAdditionalParameters] = useState<boolean>(false)
   const [patchToImport, setPatchToImport] = useState<string | null>(null)
@@ -495,34 +537,51 @@ function Home() {
             </Alert>
           </div>
           
-          <div>
-            <div className="pb-2">
-              <h2 className="text-2xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
+          <div className="flex flex-rows gap-8">
+            <div className="grow">
+              <div className="pb-2">
+                <h2 className="text-2xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
+              </div>
+
+              {state.midi && (
+                <div className="flex gap-2 justify-end items-baseline">
+                  <span className="font-semibold tracking-tight">MIDI In</span>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">{state.inport && state.inports[state.inport]?.name}</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuRadioGroup value={state.inport || undefined}>
+                        {Object.values(state.inports).map((port: MIDIInput) => {
+                          return (
+                            <DropdownMenuRadioItem onSelect={onInputChangeFn(port.id)} key={port.id} value={port.id}>{port.name}</DropdownMenuRadioItem>
+                          )
+                        })}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+              
+              <Keyboard device={device} />
             </div>
 
-            {state.midi && (
-              <div className="flex gap-2 justify-end items-baseline">
-                <span className="font-semibold tracking-tight">MIDI In</span>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">{state.inport && state.inports[state.inport]?.name}</Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuRadioGroup value={state.inport || undefined}>
-                      {Object.values(state.inports).map((port: MIDIInput) => {
-                        return (
-                          <DropdownMenuRadioItem onSelect={onInputChangeFn(port.id)} key={port.id} value={port.id}>{port.name}</DropdownMenuRadioItem>
-                        )
-                      })}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
-            
-            <Keyboard device={device} />
+            {
+              analyser && (
+                <div className="pb-4">
+                  <div className="pb-2">
+                    <h2 className="text-2xl font-semibold leading-none tracking-tight pb-4">Oscilloscope</h2>
+                  </div>
+                  <div className="pb-2">
+                    <Oscilloscope analyser={analyser} />
+                  </div>
+                </div>
+              )
+            }
           </div>
+          
+
 
           <div className="pb-4">
             <div className="pb-2">
