@@ -537,8 +537,8 @@ function Home() {
             </Alert>
           </div>
           
-          <div className="flex flex-rows gap-8">
-            <div className="grow">
+          <div className="block md:flex md:flex-rows gap-8">
+            <div className="pb-4 md:grow">
               <div className="pb-2">
                 <h2 className="text-2xl font-semibold leading-none tracking-tight pb-4">Keyboard</h2>
               </div>
@@ -573,7 +573,7 @@ function Home() {
                   <div className="pb-2">
                     <h2 className="text-2xl font-semibold leading-none tracking-tight pb-4">Oscilloscope</h2>
                   </div>
-                  <div className="pb-2">
+                  <div className="grid justify-items-center">
                     <Oscilloscope analyser={analyser} />
                   </div>
                 </div>
